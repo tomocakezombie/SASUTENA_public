@@ -1,0 +1,28 @@
+サインアップやで
+<h1>アカウント申請フォーム</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div>
+        {{ form.username.label_tag }} {{ form.username }}
+        {{ form.username.errors }}
+    </div>
+    <div>
+        {{ form.email.label_tag }} {{ form.email }}
+        {{ form.email.errors }}
+    </div>
+    <div>
+        {{ form.role.label_tag }} {{ form.role }}
+        {{ form.role.errors }}
+    </div>
+    <div>
+        {{ form.password.label_tag }} {{ form.password }}
+        {{ form.password.errors }}
+    </div>
+    <div>
+        {{ form.confirm_password.label_tag }} {{ form.confirm_password }}
+        {{ form.confirm_password.errors }}
+    </div>
+    <button type="submit">申請する</button> <br>
+    <a href="{% url 'login:index' %}"> 前ページへ戻る</a>
+</form>

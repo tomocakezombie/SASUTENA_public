@@ -1,0 +1,16 @@
+<h1>認証コードの確認</h1>
+<p>メールに送信された認証コードを入力してください。</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div>
+        {{ form.email.label_tag }} {{ form.email }}
+        {{ form.email.errors }}
+    </div>
+    <div>
+        {{ form.code.label_tag }} {{ form.code }}
+        {{ form.code.errors }}
+    </div>
+    <button type="submit">認証して登録完了</button>
+</form>
+<p><a href="{% url 'login:signup' %}">認証コードを再度申請する</a></p>

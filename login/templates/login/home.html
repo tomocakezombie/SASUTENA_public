@@ -1,0 +1,7 @@
+{% if user.is_authenticated %}
+{{ user.username }}さん、こんにちは。
+これはテスト用のページです。
+<a href="{% url 'login:logout' %}">ログアウト</a>
+{% else %}
+<p>ログインしていません</p>
+{% endif %}

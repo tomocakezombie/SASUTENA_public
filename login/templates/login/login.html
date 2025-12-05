@@ -1,0 +1,39 @@
+
+<form method="post">
+    {% csrf_token %}
+    <!-- 警告文の設定 -->
+    {% for hidden in form.hidden_fields %}  <!-- 標準エラー文を透明に -->
+    {{ hidden }}
+    {% endfor %}
+    {% if form.non_field_errors %}<!-- 標準のエラー文を赤文字に変化 -->
+    <ul class="errorlist">
+        {% for error in form.non_field_errors %}
+        <li class="error-message" style="color: #d32f2f;">{{ error }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- ユーザー名 -->
+    <div class="form-row">
+        {{ form.username.label_tag }}
+        {{ form.username }}
+        {% for error in form.username.errors %}
+        <span class="field-error" style="color: #d32f2f;">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    <!-- パスワード -->
+    <div class="form-row">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        {% for error in form.password.errors %}
+        <span class="field-error" style="color: #d32f2f;">{{ error }}</span>
+        {% endfor %}
+    </div>
+    
+    <p>あなたはまだログインしていません。</p>
+    <p>ログインしてください!!!!</p>
+    <button type="submit">ログイン</button>
+</form>
+
+<a href="{% url 'login:index' %}">前ページへ戻る</a>
