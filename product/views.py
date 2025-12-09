@@ -14,3 +14,8 @@ def product_create(request):
         else:
             form = ProductForm()
         return render(request, 'product/templates/product/product_create.html', {'form': form})
+
+@login_required
+def product_list(request):
+    products = Product.objects.filter(user = request.user).order_by('-created_at')
+    return render(request, 'product/temolates/product/product_list.html', {'product': products})
