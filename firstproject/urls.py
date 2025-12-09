@@ -39,4 +39,6 @@ urlpatterns = [
     
     # ログイン後の画面
     path('dashboard/', include('dashboard.urls'))
+    
+    path('product/', include('product.urls')),
 ]
