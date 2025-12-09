@@ -1,0 +1,39 @@
+<h2>商品登録フォーム</h2>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div>
+        <label>商品名</label><br>
+        {{ form.item_name }}
+    </div>
+
+    <div>
+        <label>数量</label><br>
+        {{ form.number }}
+    </div>
+
+    <div>
+        <label>受け渡し開始日</label><br>
+        {{ form.start_time }}
+    </div>
+
+    <div>
+        <label>受け渡し終了日</label><br>
+        {{ form.end_time }}
+    </div>
+
+    <div>
+        <label>商品説明</label><br>
+        {{ form.description }}
+    </div>
+
+    <div>
+        <label>商品画像</label><br>
+        {{ form.item_image }}
+    </div>
+
+    <button type="submit">登録する</button>
+</form>
+
+<a href="{% url 'product_list' %}">商品一覧へ</a>
