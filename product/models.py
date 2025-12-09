@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import UserAttributeSimilarityValidator
+from django.conf import settings
 
 class Product(models.Model):
     itrm_id = models.AutoField(primary_key = True)
@@ -12,7 +12,7 @@ class Product(models.Model):
     publish = models.BooleanField(default = False)
     valid = models.BooleanField(default = False)
     completed = models.BooleanField(default = False)
-    user_id = ForeignKey(User, on_delete = models.CASCADE)
+    user_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete = models.CASCADE)
     admin_comment = models.CharField(max_length = 511, null = True, blank = True)
     created_at = models.DateTimeField(auto_now_add = True)   #登録日時（自動）
     
