@@ -1,7 +1,0 @@
-<ul>
-    {% for object in object_list %}
-    <li>
-        <a href="{% url 'detail' pk=object.id %}">{{ object.name }}</a>  
-    </li>
-    {% endfor %}
-</ul>
