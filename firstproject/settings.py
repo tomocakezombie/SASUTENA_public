@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "polls.apps.PollsConfig",
     "login.apps.LoginConfig",
     "dashboard.apps.DashboardConfig",
+    "product.apps.ProductConfig",
 ]
 
 MIDDLEWARE = [
