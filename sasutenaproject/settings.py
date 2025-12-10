@@ -57,7 +57,7 @@ ROOT_URLCONF = "sasutenaproject.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -119,6 +119,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -127,8 +128,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ログイン済みか否かでのリダイレクト先設定
 LOGIN_URL = "login:index"
-LOGIN_REDIRECT_URL = "dashboard:index"
-# LOGOUT_REDIRECT_URL = "login:index"
+LOGIN_REDIRECT_URL = "accounts:my_page"
+
 LOGOUT_REDIRECT_URL = None # ログアウト画面を用意する設定らしい
 
 AUTH_USER_MODEL = "login.CustomUser"

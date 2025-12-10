@@ -1,11 +1,97 @@
-<!--a href="{% url 'login:logout' %}">ログアウト</a-->
+{% extends "base.html" %}
+{% load static %}
 
-<h1>ようこそ、sasutenaprojectへ！</h1>
+{% block title %}Sasutena Project - ログイン{% endblock %}
+
+{% block content %}
+    <div id="logo-container">
+        <canvas id="particleCanvas"></canvas>
+    </div>
+
+    <!-- メイン画面 -->
+    <div id="main-content" style="display:none;">
+        <main class="py-5">
+            <div class="container">
+
+                <div class="row justify-content-center mb-4">
+                    <div class="col-12 col-lg-8 text-center">
+
+                        <img src="{% static 'images/SASUTENA_logo.png' %}"
+                                alt="SASUTENA ロゴ"
+                                class="img-fluid mb-3"
+                                style="max-width: 300px; height: auto;">
+
+                        <p class="text-muted mb-0">
+                            余剰食品や未使用品を必要とする人へ届けるための実証用画面です。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- ログインカード -->
+                    <div class="col-lg-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h2 class="h4 fw-semibold mb-2">ログイン画面へ</h2>
+                                    <p class="text-muted mb-0">
+                                        既存アカウントをお持ちの方はこちらからログインしてください.
+                                    </p>
+                                </div>
+
+                                <!-- Django URL なしでOK -->
+                                <a class="btn btn-primary btn-lg" href="{% url 'login:login' %}">
+                                    ログインページを開く
+                                </a>
+
+                                <p class="small text-muted mb-0">
+                                    サンプルアカウント: producer1 / pass, consumer1 / pass, admin / pass
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 新規登録カード -->
+                    <div class="col-lg-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h2 class="h4 fw-semibold mb-2">新規アカウント登録</h2>
+                                    <p class="text-muted mb-0">
+                                        初めて利用する場合は、アカウント申請フォームより登録申請を行ってください。
+                                    </p>
+                                </div>
+
+                                <!-- Django URL なし -->
+                                <a class="btn btn-success btn-lg" href="{% url 'login:signup' %}">
+                                    登録申請ページを開く
+                                </a>
+
+                                <p class="small text-muted mb-0">
+                                    管理者の承認後にサービスを利用できるようになります。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> <!-- row -->
+
+            </div> <!-- container -->
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="{% static 'js/login/logo_particle.js' %}"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="{% static 'bootstrap-5.3.0-dist/js/bootstrap.bundle.min.js' %}"></script>
+<!-- <h1>ようこそ、sasutenaprojectへ！</h1>
 
 <h2> ログインページへの移動</h2>
 <a href="{% url 'login:login' %}"> ログインページへ移動 </a>
 
 
 <h2> 新規アカウント登録への移動</h2>
-<a href="{% url 'login:signup' %}"> 新規アカウント登録ページへ移動 </a>
+<a href="{% url 'login:signup' %}"> 新規アカウント登録ページへ移動 </a> -->
+{% endblock %}
 

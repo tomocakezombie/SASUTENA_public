@@ -22,7 +22,7 @@ from django.urls import include, path
 # ログイン済みか否かでリダイレクト先を変更
 def root_redirect(request):
     if request.user.is_authenticated:
-        return redirect("dashboard:index")
+        return redirect("accounts:my_page")
     return redirect("login:login")
 
 urlpatterns = [
@@ -36,6 +36,7 @@ urlpatterns = [
     # ログイン画面
     path("admin/", admin.site.urls),
     path('login/', include('login.urls')),
+    path('accounts/', include('accounts.urls')),
     
     # ログイン後の画面
     path('dashboard/', include('dashboard.urls'))

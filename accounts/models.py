@@ -20,3 +20,22 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Profile"
+
+class UserEvaluation(models.Model):
+
+    # 評価DB 
+    id = models.IntegerField(primary_key=True) # 主キー
+    target_user_id = models.ForeignKey( # 評価される対象
+        settings.AUTH_USER_MODEL, # 'login.CustomUser' 
+        on_delete=models.CASCADE,
+        related_name='evaluations'
+    )
+    from_user_id = models.ForeignKey( # 評価するユーザー
+        settings.AUTH_USER_MODEL, # 'login.CustomUser' 
+        on_delete=models.CASCADE,
+        related_name='given_evaluations'
+    )
+    score = models.IntegerField()
+
+    def __str__(self):
+        return f"Evaluation {self.id} - {self.target_user_id.username} by {self.from_user_id.username}"
