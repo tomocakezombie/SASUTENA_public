@@ -35,8 +35,8 @@ urlpatterns = [
     
     # ログイン画面
     path("admin/", admin.site.urls),
-    path('login/', include('login.urls')),
-    path('accounts/', include('accounts.urls')),
+    path('login/', include(('login.urls', 'login'), namespace='login')),
+    path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
     
     # ログイン後の画面
     path('dashboard/', include('dashboard.urls')),
