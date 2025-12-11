@@ -33,3 +33,8 @@ def product_delete(request, pk):
 
     product.delete()
     return redirect('product_list')
+
+@login_required
+def consumer_product_list(request):
+    products = Product.objects.filter(publish=True, valid=True, completed=False).order_by('-created_at')
+    return render(request, 'product/consumer_product_list.html', {'products': products})

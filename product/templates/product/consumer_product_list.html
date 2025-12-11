@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}商品検索・申込み{% endblock %}
+
+{% block content %}
+<div class="py-4">
+	<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+		<div>
+			<h2 class="fw-semibold mb-2">商品検索・申込み</h2>
+			<p class="text-muted mb-0">気になる出品を探して申込みを行うメニューです。</p>
+		</div>
+		<div class="d-flex flex-wrap gap-2">
+			<a class="btn btn-outline-primary" href="{% url 'accounts:my_page' %}">マイページを見る</a>
+			<a class="btn btn-outline-secondary" href="javascript:history.back()">戻る</a>
+			<a class="btn btn-outline-danger" href="{% url 'login:logout' %}">ログアウト</a>
+		</div>
+	</div>
+
+	<form method="get" class="card border-0 shadow-sm mb-4">
+		<div class="card-body">
+			<label class="form-label text-muted">キーワード・タグで検索</label>
+			<div class="input-group">
+				<input type="text" name="q" class="form-control" placeholder="キーワードやタグ名を入力 (Enterでタグ追加)" value="{{ request.GET.q }}">
+				<button class="btn btn-primary" type="submit">検索</button>
+			</div>
+		</div>
+	</form>
+
+	{% if products %}
+		<p class="text-muted small mb-3">アイテムをクリックして詳細／申込みができます。</p>
+
+		<div class="vstack gap-4">
+			{% for product in products %}
+			<article class="card shadow-sm border-0">
+				<div class="row g-0 align-items-center">
+					{% if product.item_image %}
+					<div class="col-md-3">
+						<img src="{{ product.item_image.url }}" alt="{{ product.item_name }}" class="img-fluid rounded-start">
+					</div>
+					{% endif %}
+					<div class="{% if product.item_image %}col-md-9{% else %}col-12{% endif %}">
+						<div class="card-body">
+							<h3 class="h5 fw-semibold mb-2">{{ product.item_name }}</h3>
+							<p class="text-muted small mb-3">{{ product.description|default:"" }}</p>
+
+							<div class="d-flex flex-wrap gap-3 text-muted small mb-3">
+								<span>数量：{{ product.number }}</span>
+								<span>受け渡し：{{ product.start_time|date:"Y-m-d" }} ～ {{ product.end_time|date:"Y-m-d" }}</span>
+								{% if product.tags %}
+								<span>タグ：{{ product.tags }}</span>
+								{% endif %}
+							</div>
+
+							<div class="d-flex flex-wrap align-items-center gap-3">
+								<span class="text-muted small">出品者：{{ product.user.username }}</span>
+								<a class="btn btn-link p-0" href="#">詳細／申込み</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</article>
+			{% endfor %}
+		</div>
+	{% else %}
+		<div class="text-center py-5 bg-light border rounded">
+			<p class="fw-semibold mb-2">現在申込み可能な商品がありません。</p>
+			<p class="text-muted small mb-0">新しい出品が公開されるまでお待ちください。</p>
+		</div>
+	{% endif %}
+</div>
+{% endblock %}
