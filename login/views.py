@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .models import CustomUser, AccountRequest
+from accounts.models import UserProfile
 
 # class homeView(TemplateView):
 #     # template_name = "home.html"
@@ -74,18 +75,28 @@ class VerifySignupView(FormView):
             form.add_error(None, "このユーザー名は既に登録されています。")
             return self.form_invalid(form)
 
-        CustomUser.objects.create_user(
+        # 1. まず loginアプリの CustomUser を作成・保存
+        new_user = CustomUser.objects.create_user(
             username=account_request.username,
             email=account_request.email,
-            password=account_request.password,
-            role=account_request.role,
-            is_active=True,
+            password=account_request.password, # create_userを使うとハッシュ化されます
+            role=account_request.role
         )
 
-        # アカウントリクエストの状態を更新
-        account_request.is_approved = True # アカウントが承認されたことを示す 将来的に消す
-        account_request.verification_code = None
-        account_request.verification_expires_at = None
+        # 2. 次に accountsアプリの UserProfile を作成して紐付け
+        # 設計書にある初期値があればここで設定
+        UserProfile.objects.create(
+            user=new_user,
+            nick_name=account_request.username, # 初期値としてユーザー名を入れるなど
+            publish_profile=True,
+            mail_allow=True
+        )
+
+        # 3. リクエスト済みデータのクリーンアップ
+        account_request.is_approved = True
+        account_request.save()
+        
+        # return redirect('login:login_success') # ログイン画面やダッシュボードへ
         account_request.save(update_fields=["is_approved", "verification_code", "verification_expires_at"])
         self.request.session.pop("pending_email", None)
         messages.success(self.request, "アカウント登録申請が完了しました。ログインしてください。")
