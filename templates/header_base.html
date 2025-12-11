@@ -1,0 +1,66 @@
+{% load static %}
+
+<header>
+  <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm sticky-top">
+    <div class="container py-2">
+
+      <!-- 左：ロゴ（画像版） -->
+      <a class="navbar-brand d-flex align-items-center gap-3" href="{% url 'accounts:my_page' %}">
+        <img src="{% static 'images/SASUTENA_logo.png' %}" 
+             alt="SASUTENA ロゴ" 
+             style="height:40px; width:auto;">
+      </a>
+
+      <!-- 右メニュー -->
+      <div class="d-flex align-items-center gap-2">
+
+        {% if user.is_authenticated %}
+        <!-- ▼ ログイン後：マイページメニュー -->
+        <div class="dropdown">
+          <button type="button" 
+                  class="btn btn-outline-primary d-flex align-items-center gap-2"
+                  id="navMyPageBtn" 
+                  data-bs-toggle="dropdown" 
+                  aria-expanded="false">
+            <i class="bi bi-person-circle fs-4"></i>
+            <span class="d-none d-sm-inline">{{ user.username }}</span>
+          </button>
+
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-person"></i><span>マイページ</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-chat-dots"></i><span>メッセージ</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-gear"></i><span>設定</span>
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item text-danger d-flex align-items-center gap-2" href="{% url 'login:logout' %}">
+                <i class="bi bi-box-arrow-right"></i><span>ログアウト</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        {% else %}
+        <!-- ▼ ログイン前：ログインボタン -->
+        <a class="btn btn-outline-primary d-flex align-items-center gap-2" href="{% url 'login:login' %}">
+          <i class="bi bi-person-circle fs-4"></i>
+          <span class="d-none d-sm-inline">ログイン</span>
+        </a>
+        {% endif %}
+
+      </div>
+
+    </div>
+  </nav>
+</header>

@@ -1,0 +1,25 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Sasutena Project{% endblock %}</title>
+    <link href="{% static 'bootstrap-5.3.0-dist/css/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- <link href="{% static 'bootstrap-icons-1.10.5/bootstrap-icons.css' %}" rel="stylesheet"> -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% include "header_base.html" %}
+
+<main class="container mb-5">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="{% static 'bootstrap-5.3.0-dist/js/bootstrap.bundle.min.js' %}"></script>
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

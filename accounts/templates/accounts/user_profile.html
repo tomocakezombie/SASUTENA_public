@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ target_user.username }} のプロフィール | Sasutena Project{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h1 class="h4 mb-0">{{ target_user.username }} のプロフィール</h1>
+        </div>
+        <div class="card-body">
+            {% if profile %}
+                <dl class="row">
+                    <dt class="col-sm-3">名前</dt>
+                    <dd class="col-sm-9">{{ profile.name|default:"未設定" }}</dd>
+
+                    <dt class="col-sm-3">ニックネーム</dt>
+                    <dd class="col-sm-9">{{ profile.nick_name|default:"未設定" }}</dd>
+
+                    <dt class="col-sm-3">プロフィール</dt>
+                    <dd class="col-sm-9">{{ profile.content_profile|linebreaksbr|default:"未設定" }}</dd>
+                </dl>
+            {% else %}
+                <p class="text-muted mb-0">プロフィール情報が見つかりません。</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

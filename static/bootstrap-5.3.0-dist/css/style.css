@@ -1,0 +1,204 @@
+/* ナビバー全体 */
+.custom-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(90deg, #6a11cb, #2575fc) !important; /* グラデーション */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  padding: 0.8rem 0;
+}
+
+/* ブランドロゴ */
+.custom-navbar .navbar-brand {
+  font-weight: bold;
+  font-size: 1.4rem;
+  color: #fff;
+  text-decoration: none;
+}
+
+/* ナビリンク部分 */
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  color: #ffffff;
+  text-decoration: none;
+  position: relative;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+/* hoverアニメーション：下線スライドイン */
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0%;
+  height: 2px;
+  background-color: #fff;
+  transition: width 0.3s ease;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* hover時に少し明るく */
+.nav-links a:hover {
+  color: #e0e0e0;
+}
+
+/* 小さい画面でも整うように */
+@media (max-width: 768px) {
+  .custom-navbar .container {
+    flex-direction: column;
+    align-items: center;
+  }
+  .nav-links {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+body {
+  background: linear-gradient(180deg, #f0f4ff, #ffffff);
+  min-height: 100vh;
+}
+
+
+
+/* ---- ダークモード基本色 ---- */
+:root {
+    --bg-color: #121212;
+    --text-color: #121212;
+    --card-bg: #1e1e1e;
+    --primary-color: #2575fc;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* ナビバーもダークに */
+.custom-navbar {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* リンクの色 */
+.custom-navbar .nav-links li a {
+    color: var(--text-color);
+}
+.custom-navbar .nav-links li a:hover {
+    color: var(--primary-color);
+}
+
+/* カードの背景と微妙な影 */
+.card {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+/* グリッドでカードを並べる */
+.card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+/* カードのホバー効果 */
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 12px var(--shadow-color);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+/* カード内の画像など調整 */
+.card img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+}
+
+/* ボタンホバー */
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    transition: background-color 0.3s, transform 0.2s;
+}
+.btn-primary:hover {
+    background-color: #6a11cb; /* ホバーでグラデーションカラー風 */
+    transform: translateY(-2px);
+}
+
+/* 入力フォームフォーカス時の枠線発光 */
+input.form-control, textarea.form-control {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid #555;
+    transition: 0.3s;
+}
+input.form-control:focus, textarea.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px var(--primary-color);
+    outline: none;
+}
+
+/* 背景アニメーション用 */
+@keyframes gradientBG {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+body {
+    /* 既存のダークモード背景をアニメーション用に変更 */
+    background: linear-gradient(270deg, #24f31c, #eb4848, #f3f162, #ffffff);
+    background-size: 800% 800%;
+    animation: gradientBG 10s ease infinite;
+}
+
+body {
+    overflow: hidden; /* はみ出す部分を隠す */
+    position: relative;
+    height: 100vh;
+    background-color: #121212;
+}
+
+/* 写真用の要素を複数重ねる */
+.moving-photo {
+    position: absolute;
+    width: 200px; /* 好きなサイズ */
+    height: 200px;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.7;
+    animation: movePhoto 15s linear infinite;
+    z-index: 10;
+}
+
+
+
+/* アニメーション */
+@keyframes movePhoto {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(300px, 100px) rotate(45deg); }
+    50% { transform: translate(-200px, 200px) rotate(90deg); }
+    75% { transform: translate(100px, -300px) rotate(135deg); }
+    100% { transform: translate(0, 0) rotate(180deg); }
+}

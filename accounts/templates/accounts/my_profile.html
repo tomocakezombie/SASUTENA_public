@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}マイプロフィール | Sasutena Project{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h1 class="h4 mb-0">マイプロフィール</h1>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">ユーザー名</dt>
+                <dd class="col-sm-9">{{ user_obj.username }}</dd>
+
+                <dt class="col-sm-3">メール</dt>
+                <dd class="col-sm-9">{{ user_obj.email|default:"未登録" }}</dd>
+
+                {% if profile %}
+                    <dt class="col-sm-3">名前</dt>
+                    <dd class="col-sm-9">{{ profile.name|default:"未設定" }}</dd>
+
+                    <dt class="col-sm-3">ニックネーム</dt>
+                    <dd class="col-sm-9">{{ profile.nick_name|default:"未設定" }}</dd>
+
+                    <dt class="col-sm-3">プロフィール</dt>
+                    <dd class="col-sm-9">{{ profile.content_profile|linebreaksbr|default:"未設定" }}</dd>
+
+                    <dt class="col-sm-3">公開設定</dt>
+                    <dd class="col-sm-9">{{ profile.publish_profile|yesno:"公開,非公開" }}</dd>
+                {% else %}
+                    <dt class="col-sm-3">プロフィール</dt>
+                    <dd class="col-sm-9 text-muted">プロフィールが未設定です。</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+{% endblock %}
+
