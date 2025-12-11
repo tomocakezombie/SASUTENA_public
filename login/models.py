@@ -6,10 +6,8 @@ import secrets
 
 
 ROLE_CHOICES = [
-    ("admin", "Admin"),
-    ("user", "User"),
-    ("guest", "Guest"),
-    ("HADA!", "HADA!"),
+    ("proceduct", "生産者"),
+    ("consumer", "消費者"),
 ]
 
 # カスタムユーザーモデル ロール追加
