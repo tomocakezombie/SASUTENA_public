@@ -29,7 +29,15 @@
                         <div class="mb-3">
                             {{ form.email.label_tag }}
                             {{ form.email }}
-                            {{ form.email.errors }}
+
+                            <!--メルアドで @が無いとエラー-->
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.email.errors }}
+                                </div>
+                            {% endif %}
+
+                            <!--メルアドが正常な場合-->
                             <div class="form-text">
                                 入力したメールアドレスに認証コードが送信されます。
                             </div>
@@ -45,7 +53,12 @@
                         <div class="mb-3">
                             {{ form.confirm_password.label_tag }} 
                             {{ form.confirm_password }}
-                            {% comment %} {{ form.confirm_password.errors }} {% endcomment %}
+                            <!-- エラー文が赤文字になる -->
+                                {% if  form.confirm_password.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.confirm_password.errors }}
+                                    </div>
+                                {% endif %}
                         </div>
                         <!-- ロール選択 -->
                         <div class="mb-3">
