@@ -8,11 +8,15 @@ from .models import Product
 def product_create(request):
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
+        print("フォーム送信を受け取りました")
         if form.is_valid():
+            print("フォームは有効です")
             product = form.save(commit=False)
             product.user = request.user
             product.save()
             return redirect('product_list')
+        print("フォームは無効です")
+        return render(request, 'product/product_create.html', {'form': form})
     else:
         form = ProductForm()
 
@@ -33,3 +37,8 @@ def product_delete(request, pk):
 
     product.delete()
     return redirect('product_list')
+
+@login_required
+def consumer_product_list(request):
+    products = Product.objects.filter(publish=True, valid=True, completed=False).order_by('-created_at')
+    return render(request, 'product/consumer_product_list.html', {'products': products})
