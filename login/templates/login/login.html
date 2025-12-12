@@ -48,15 +48,34 @@
                         <form id="loginform" method="POST" class="needs-validation" novalidate>
                             {% csrf_token %}
 
+                            <!--  ログイン失敗（ユーザー名 or パスワード間違い）のエラーメッセージ -->
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger py-2">
+                                    {% for error in form.non_field_errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <!-- ユーザー名 -->
                             <div class="mb-3">
-                                <label for="username" class="form-label">ログインID（ユーザー名）</label>
-                                <input id="username" name="username" class="form-control" autocomplete="username" required>
+
+                                {{ form.username.label_tag }}
+                                {{ form.username}}
+                                {% for error in form.username.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
                             </div>
 
+                            <!-- パスワード -->
                             <div class="mb-3">
-                                <label for="password" class="form-label">パスワード</label>
-                                <input id="password" name="password" type="password" class="form-control"
-                                       autocomplete="current-password" required>
+
+                                {{ form.password.label_tag }}
+                                {{ form.password}}
+                                {% for error in form.password.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+
                             </div>
 
                             <div class="d-flex flex-wrap gap-2">
