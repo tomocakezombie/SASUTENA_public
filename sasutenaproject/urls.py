@@ -27,11 +27,6 @@ def root_redirect(request):
 
 urlpatterns = [
     path("", root_redirect, name="root"),
-    # path('polls/', include('polls.urls')),  
-    # path("hello/", views.helloworld),
-    # path('one', views.one_hello),
-    # path('list/', views.FriendListView.as_view(), name="list"),
-    # path('<int:pk>/', views.FriendDetailView.as_view(), name="detail"),
     
     # ログイン画面
     path("admin/", admin.site.urls),
@@ -41,5 +36,5 @@ urlpatterns = [
     # ログイン後の画面
     path('dashboard/', include('dashboard.urls')),
     
-    path('product/', include('product.urls')),
+    path('product/', include(('product.urls', 'product'), namespace='product')),
 ]
