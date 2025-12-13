@@ -1,28 +1,90 @@
-サインアップやで
-<h1>アカウント申請フォーム</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
-    <div>
-        {{ form.username.label_tag }} {{ form.username }}
-        {{ form.username.errors }}
+
+{% include "base.html" %}
+{% load static %}
+
+
+<main class="container py-5">
+    <div class="row g-4 justify-content-center">
+        <div class="col-lg-6">
+
+            <h1 class="display-6 fw-semibold mb-3">利用登録申請</h1>
+            <p class="text-muted mb-4">新しくアカウントを作成するには、以下のフォームから登録申請を送信してください。</p>
+
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+
+                    <h2 class="h5 fw-semibold mb-3">申請フォーム</h2>
+
+                    <form id="registerForm" method="post">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        <!-- ユーザー名 -->
+                        <div class="mb-3">
+                            {{ form.username.label_tag }}
+                            {{ form.username }}
+                            {{ form.username.errors }}
+                        </div>
+
+                        <!-- メールアドレス -->
+                        <div class="mb-3">
+                            {{ form.email.label_tag }}
+                            {{ form.email }}
+
+                            <!--メルアドで @が無いとエラー-->
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.email.errors }}
+                                </div>
+                            {% endif %}
+
+                            <!--メルアドが正常な場合-->
+                            <div class="form-text">
+                                入力したメールアドレスに認証コードが送信されます。
+                            </div>
+                        </div>
+
+                        <!-- パスワード -->
+                        <div class="mb-3">
+                            {{ form.password.label_tag }}
+                            {{ form.password }}
+                            {{ form.password.errors }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.confirm_password.label_tag }} 
+                            {{ form.confirm_password }}
+                            <!-- エラー文が赤文字になる -->
+                                {% if  form.confirm_password.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.confirm_password.errors }}
+                                    </div>
+                                {% endif %}
+                        </div>
+                        <!-- ロール選択 -->
+                        <div class="mb-3">
+                            {{ form.role.label_tag }}
+                            {{ form.role}}
+                            {{ form.role.errors }}
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">申請を送る</button>
+                        
+
+                    </form>
+
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <p class="small text-muted mb-2">登録申請が承認されると、ログインできるようになります。</p>
+                    <a href="{% url 'login:login' %}" class="small">既にアカウントをお持ちの方はログイン画面へ</a>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <div>
-        {{ form.email.label_tag }} {{ form.email }}
-        {{ form.email.errors }}
-    </div>
-    <div>
-        {{ form.role.label_tag }} {{ form.role }}
-        {{ form.role.errors }}
-    </div>
-    <div>
-        {{ form.password.label_tag }} {{ form.password }}
-        {{ form.password.errors }}
-    </div>
-    <div>
-        {{ form.confirm_password.label_tag }} {{ form.confirm_password }}
-        {{ form.confirm_password.errors }}
-    </div>
-    <button type="submit">申請する</button> <br>
-    <a href="{% url 'login:index' %}"> 前ページへ戻る</a>
-</form>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
