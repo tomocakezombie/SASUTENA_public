@@ -1,4 +1,95 @@
-<h1>認証コードの確認</h1>
+{% include "base.html" %}
+{% load static %}
+
+<main class="container py-5">
+    <div class="row g-4 justify-content-center">
+        <div class="col-lg-6">
+
+            <h1 class="display-6 fw-semibold mb-3">認証コード確認</h1>
+            <p class="text-muted mb-4">
+                登録時に入力したメールアドレス宛に送信された認証コードを入力してください。
+            </p>
+
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- フォーム全体のエラー -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger text-start">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- メールアドレス -->
+                        <!-- <div class="mb-3">
+                            {{ form.email.label_tag }}
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div> -->
+
+                        <!-- メールアドレス（表示のみ） -->
+                        <div class="mb-3">
+                            <label class="form-label">メールアドレス</label>
+
+                            <p class="form-control-plaintext">
+                                {{ form.email.value }}
+                            </p>
+
+                            {{ form.email.as_hidden }}
+                        </div>
+
+
+                        <!-- 認証コード -->
+                        <div class="mb-3">
+                            {{ form.code.label_tag }}
+                            {{ form.code }}
+
+
+                            <!-- {{ form.code.errors }} -->
+                            {% for error in form.code.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">
+                            認証して登録完了
+                        </button>
+                    </form>
+
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <p class="small text-muted mb-2">
+                        認証コードが届かない場合は、再度申請してください。
+                    </p>
+                    <a href="{% url 'login:signup' %}" class="small">
+                        認証コードを再度申請する
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+<!-- <h1>認証コードの確認</h1>
 <p>メールに送信された認証コードを入力してください。</p>
 <form method="post">
     {% csrf_token %}
@@ -13,4 +104,4 @@
     </div>
     <button type="submit">認証して登録完了</button>
 </form>
-<p><a href="{% url 'login:signup' %}">認証コードを再度申請する</a></p>
+<p><a href="{% url 'login:signup' %}">認証コードを再度申請する</a></p> -->
