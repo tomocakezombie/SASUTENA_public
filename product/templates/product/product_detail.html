@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}商品詳細{% endblock %}
+
+{% block content %}
+<section class="py-4">
+	<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+		<div>
+			<h1 class="h4 mb-1">商品詳細</h1>
+			<p class="text-muted mb-0">申込み状況や承認状態を確認できます。</p>
+		</div>
+		<div class="d-flex gap-2">
+			<a class="btn btn-outline-secondary" href="javascript:history.back()">戻る</a>
+			<a class="btn btn-outline-primary" href="{% url 'accounts:my_page' %}">マイページ</a>
+		</div>
+	</div>
+
+	<div class="card border-0 shadow-sm mb-4">
+		<div class="card-body p-4">
+			<div class="row g-4 align-items-start">
+				<div class="col-12 col-lg-5">
+					<div class="ratio ratio-4x3 rounded overflow-hidden bg-light">
+						{% if product.item_image %}
+							<img src="{{ product.item_image.url }}" alt="{{ product.item_name }}" class="img-fluid w-100 h-100 object-fit-cover">
+						{% else %}
+							<div class="d-flex align-items-center justify-content-center text-muted">No Image</div>
+						{% endif %}
+					</div>
+				</div>
+				<div class="col-12 col-lg-7">
+					<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+						<h2 class="h4 mb-0 fw-semibold">{{ product.item_name }}</h2>
+						<span class="badge bg-light text-secondary">{{ product.user.username }}</span>
+						{% if product.valid %}
+							<span class="badge bg-success">承認済み</span>
+						{% else %}
+							<span class="badge bg-warning text-dark">承認待ち</span>
+						{% endif %}
+						{% if product.publish %}
+							<span class="badge bg-primary">公開中</span>
+						{% else %}
+							<span class="badge bg-secondary">非公開</span>
+						{% endif %}
+						{% if product.completed %}
+							<span class="badge bg-dark">受け渡し完了</span>
+						{% else %}
+							<span class="badge bg-info text-dark">受付中</span>
+						{% endif %}
+					</div>
+
+					<p class="text-muted mb-3">{{ product.description|default:"説明文はまだ登録されていません。" }}</p>
+
+					<div class="row row-cols-1 row-cols-md-2 gy-2 mb-4">
+						<div class="col">
+							<div class="small text-muted">数量</div>
+							<div class="fw-semibold">{{ product.number|default:"-" }}</div>
+						</div>
+						<div class="col">
+							<div class="small text-muted">受け渡し期間</div>
+							<div class="fw-semibold">{{ product.start_time|date:'Y年n月j日' }} 〜 {{ product.end_time|date:'Y年n月j日' }}</div>
+						</div>
+						<div class="col">
+							<div class="small text-muted">タグ</div>
+							<div class="fw-semibold">{{ product.tags|default:"未設定" }}</div>
+						</div>
+						<div class="col">
+							<div class="small text-muted">登録日</div>
+							<div class="fw-semibold">{{ product.created_at|date:'Y年n月j日' }}</div>
+						</div>
+					</div>
+
+					<div class="d-flex flex-wrap gap-2">
+						<a class="btn btn-outline-primary disabled" href="#" tabindex="-1" aria-disabled="true">編集（審査中）</a>
+						<a class="btn btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="card border-0 shadow-sm mb-4">
+		<div class="card-header bg-white py-3">
+			<h3 class="h6 mb-0">申込み一覧</h3>
+		</div>
+		<div class="card-body">
+			<p class="text-muted mb-0">申込みはまだありません。</p>
+		</div>
+	</div>
+
+	<div class="card border-0 shadow-sm">
+		<div class="card-header bg-white py-3">
+			<h3 class="h6 mb-0">コメント</h3>
+		</div>
+		<div class="card-body">
+			<p class="text-muted small">コメントはまだありません。最初のコメントを投稿してみましょう。</p>
+			<form class="vstack gap-3" onsubmit="return false;">
+				<div>
+					<label for="comment" class="form-label">コメントを投稿</label>
+					<textarea id="comment" class="form-control" rows="4" placeholder="コメントを入力してください"></textarea>
+				</div>
+				<div class="d-flex gap-2 justify-content-end">
+					<button type="reset" class="btn btn-outline-secondary">クリア</button>
+					<button type="submit" class="btn btn-primary" disabled>投稿</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</section>
+{% endblock %}
