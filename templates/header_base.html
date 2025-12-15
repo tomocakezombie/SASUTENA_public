@@ -14,6 +14,7 @@
       <!-- 右メニュー -->
       <div class="d-flex align-items-center gap-2">
 
+        
         {% if user.is_authenticated %}
         <!-- ▼ ログイン後：マイページメニュー -->
         <div class="dropdown">
@@ -28,17 +29,17 @@
 
           <ul class="dropdown-menu dropdown-menu-end">
             <li>
-              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:my_page' %}">
                 <i class="bi bi-person"></i><span>マイページ</span>
               </a>
             </li>
             <li>
-              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'comunicate:conversation_list' %}">
                 <i class="bi bi-chat-dots"></i><span>メッセージ</span>
               </a>
             </li>
             <li>
-              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:settings' %}">
                 <i class="bi bi-gear"></i><span>設定</span>
               </a>
             </li>

@@ -50,3 +50,35 @@ def profile_detail(request, username):
 			"profile": profile,
 		},
 	)
+
+@login_required
+def settings(request):
+	"""Display and handle the user settings page."""
+	profile, _created = UserProfile.objects.get_or_create(
+		user=request.user,
+		defaults={
+			"nick_name": request.user.username,
+			"publish_profile": True,
+			"mail_allow": True,
+		},
+	)
+
+	if request.method == "POST":
+		nick_name = request.POST.get("nick_name", "").strip()
+		publish_profile = request.POST.get("publish_profile") == "on"
+		mail_allow = request.POST.get("mail_allow") == "on"
+
+		profile.nick_name = nick_name
+		profile.publish_profile = publish_profile
+		profile.mail_allow = mail_allow
+		profile.save()
+
+		return redirect("accounts:my_page")
+
+	return render(
+		request,
+		"accounts/settings.html",
+		{
+			"profile": profile,
+		},
+	)

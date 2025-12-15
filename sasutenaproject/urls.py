@@ -37,8 +37,8 @@ urlpatterns = [
     
     # ログイン後の画面
     path('dashboard/', include('dashboard.urls')),
-    
     path('product/', include(('product.urls', 'product'), namespace='product')),
+    path('messages/', include(('comunicate.urls', 'comunicate'), namespace='comunicate')),
 ]
 
 if settings.DEBUG:

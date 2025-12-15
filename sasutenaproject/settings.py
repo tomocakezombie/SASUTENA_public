@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "dashboard.apps.DashboardConfig",
     "accounts.apps.AccountsConfig",
     "product.apps.ProductConfig",
+    "comunicate.apps.ComunicateConfig",
 ]
 
 MIDDLEWARE = [
