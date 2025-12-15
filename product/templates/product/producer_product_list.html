@@ -13,7 +13,7 @@
                     <p class="text-muted mb-0">生産者向けダッシュボードです。新しい出品登録や進行中の申込状況をここで確認できます。</p>
                 </div>
                 <div class="ms-md-auto d-flex gap-2">
-                    <a class="btn btn-primary btn-lg" href="{% url 'product_create' %}">商品を登録</a>
+                    <a class="btn btn-primary btn-lg" href="{% url 'product:product_create' %}">商品を登録</a>
                 </div>
             </div>
         </div>
@@ -73,8 +73,8 @@
                                     {% endif %}
                                     <div class="d-flex flex-wrap gap-2">
                                     {% comment %} 詳細ページ実装時にリンク先を差し替え {% endcomment %}
-                                        <a class="btn btn-sm btn-outline-primary" href="#">詳細を見る</a>
-                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'product_delete' product.pk %}">削除</a>
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'product:product_detail' product.pk %}">詳細を見る</a>
+                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
                                     </div>
                                 </div>
                             </div>
@@ -140,7 +140,7 @@
                                     {% if product.admin_comment %}
                                         <p class="mb-2 small text-danger">コメント: {{ product.admin_comment }}</p>
                                     {% endif %}
-                                    <a class="btn btn-sm btn-outline-primary" href="#">詳細を見る</a>
+                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'product:product_detail' product.pk %}">詳細を見る</a>
                                 </div>
                             </div>
                         </article>
