@@ -70,8 +70,12 @@
 					</div>
 
 					<div class="d-flex flex-wrap gap-2">
-						<a class="btn btn-outline-primary disabled" href="#" tabindex="-1" aria-disabled="true">編集（審査中）</a>
-						<a class="btn btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
+						{% if is_owner %}
+							<a class="btn btn-outline-primary disabled" href="#" tabindex="-1" aria-disabled="true">編集（審査中）</a>
+							<a class="btn btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
+						{% elif show_apply_button %}
+							<button type="button" class="btn btn-primary">申込み</button>
+						{% endif %}
 					</div>
 				</div>
 			</div>

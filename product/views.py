@@ -58,4 +58,11 @@ def producer_product_list(request):
 @login_required
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    return render(request, 'product/product_detail.html', {'product': product})
+    is_owner = product.user == request.user
+    user_role = getattr(request.user, 'role', '')
+    consumer_roles = {'consumer', 'guest', 'user'}
+    return render(request, 'product/product_detail.html', {
+        'product': product,
+        'is_owner': is_owner,
+        'show_apply_button': (user_role in consumer_roles) and not is_owner,
+    })
