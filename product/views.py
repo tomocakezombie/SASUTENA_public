@@ -54,3 +54,8 @@ def producer_product_list(request):
         'my_products': my_products,
         'all_products': all_products,
     })
+    
+@login_required
+def product_detail(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    return render(request, 'product/product_detail.html', {'product': product})

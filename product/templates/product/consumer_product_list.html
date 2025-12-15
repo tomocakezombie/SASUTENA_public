@@ -55,7 +55,7 @@
 
 							<div class="d-flex flex-wrap align-items-center gap-3">
 								<span class="text-muted small">出品者：{{ product.user.username }}</span>
-								<a class="btn btn-link p-0" href="#">詳細／申込み</a>
+								<a class="btn btn-link p-0" href="{% url 'product:product_detail' product.pk %}">詳細／申込み</a>
 							</div>
 						</div>
 					</div>
