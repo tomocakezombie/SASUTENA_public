@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}出品管理{% endblock %}
+
+{% block content %}
+<section class="py-4">
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
+                <div>
+                    <p class="text-muted small mb-1">ログイン中</p>
+                    <h1 class="h4 fw-bold mb-2">{{ request.user.username }} さん</h1>
+                    <p class="text-muted mb-0">生産者向けダッシュボードです。新しい出品登録や進行中の申込状況をここで確認できます。</p>
+                </div>
+                <div class="ms-md-auto d-flex gap-2">
+                    <a class="btn btn-primary btn-lg" href="{% url 'product_create' %}">商品を登録</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap row-gap-2">
+                <div>
+                    <h2 class="h5 mb-1">あなたの出品一覧</h2>
+                    <p class="text-muted small mb-0">承認状況や受け渡し予定日をまとめて確認し、必要に応じて調整を行ってください。</p>
+                </div>
+                <span class="text-muted small">全 {{ my_products|length }} 件</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if my_products %}
+                <div class="list-group list-group-flush">
+                    {% for product in my_products %}
+                        <article class="list-group-item py-4 px-3">
+                            <div class="row g-3 align-items-start">
+                                <div class="col-auto">
+                                    {% if product.item_image %}
+                                        <img src="{{ product.item_image.url }}" alt="{{ product.item_name }}" class="rounded" style="width: 130px; height: 90px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted" style="width: 130px; height: 90px;">No Image</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                        <h3 class="h6 mb-0 fw-bold">{{ product.item_name }}</h3>
+                                        {% if product.valid %}
+                                            <span class="badge bg-success">承認済み</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">承認待ち</span>
+                                        {% endif %}
+                                        {% if product.publish %}
+                                            <span class="badge bg-primary">公開中</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">非公開</span>
+                                        {% endif %}
+                                        {% if product.completed %}
+                                            <span class="badge bg-dark">受け渡し完了</span>
+                                        {% else %}
+                                            <span class="badge bg-info text-dark">受付中</span>
+                                        {% endif %}
+                                    </div>
+                                    <ul class="list-unstyled mb-2 small text-muted">
+                                        <li>数量: {{ product.number }}</li>
+                                        <li>受け渡し期間: {{ product.start_time|date:'Y年n月j日' }} ～ {{ product.end_time|date:'Y年n月j日' }}</li>
+                                    </ul>
+                                    {% if product.description %}
+                                        <p class="mb-2 small">{{ product.description }}</p>
+                                    {% endif %}
+                                    {% if product.admin_comment %}
+                                        <p class="mb-2 small text-danger">コメント: {{ product.admin_comment }}</p>
+                                    {% endif %}
+                                    <div class="d-flex flex-wrap gap-2">
+                                    {% comment %} 詳細ページ実装時にリンク先を差し替え {% endcomment %}
+                                        <a class="btn btn-sm btn-outline-primary" href="#">詳細を見る</a>
+                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'product_delete' product.pk %}">削除</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-5 text-center text-muted">まだ出品している商品はありません。</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap row-gap-2">
+                <div>
+                    <h2 class="h5 mb-1">全体の出品（承認前も含む）</h2>
+                    <p class="text-muted small mb-0">他の生産者の案件も閲覧でき、運営側の承認状況を確認できます。</p>
+                </div>
+                <span class="text-muted small">全 {{ all_products|length }} 件</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if all_products %}
+                <div class="list-group list-group-flush">
+                    {% for product in all_products %}
+                        <article class="list-group-item py-4 px-3">
+                            <div class="row g-3 align-items-start">
+                                <div class="col-auto">
+                                    {% if product.item_image %}
+                                        <img src="{{ product.item_image.url }}" alt="{{ product.item_name }}" class="rounded" style="width: 110px; height: 80px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted" style="width: 110px; height: 80px;">No Image</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                        <h3 class="h6 mb-0 fw-bold">{{ product.item_name }}</h3>
+                                        <span class="badge bg-light text-secondary">{{ product.user.username }}</span>
+                                        {% if product.valid %}
+                                            <span class="badge bg-success">承認済み</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">承認待ち</span>
+                                        {% endif %}
+                                        {% if product.publish %}
+                                            <span class="badge bg-primary">公開中</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">非公開</span>
+                                        {% endif %}
+                                        {% if product.completed %}
+                                            <span class="badge bg-dark">受け渡し完了</span>
+                                        {% else %}
+                                            <span class="badge bg-info text-dark">受付中</span>
+                                        {% endif %}
+                                    </div>
+                                    <ul class="list-unstyled mb-2 small text-muted">
+                                        <li>数量: {{ product.number }}</li>
+                                        <li>受け渡し期間: {{ product.start_time|date:'Y年n月j日' }} ～ {{ product.end_time|date:'Y年n月j日' }}</li>
+                                    </ul>
+                                    {% if product.description %}
+                                        <p class="mb-2 small">{{ product.description }}</p>
+                                    {% endif %}
+                                    {% if product.admin_comment %}
+                                        <p class="mb-2 small text-danger">コメント: {{ product.admin_comment }}</p>
+                                    {% endif %}
+                                    <a class="btn btn-sm btn-outline-primary" href="#">詳細を見る</a>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-5 text-center text-muted">表示できる商品はありません。</div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
