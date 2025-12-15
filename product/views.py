@@ -14,7 +14,7 @@ def product_create(request):
             product = form.save(commit=False)
             product.user = request.user
             product.save()
-            return redirect('producer_product_list')
+            return redirect('product:producer_product_list')
         print("フォームは無効です")
         return render(request, 'product/product_create.html', {'form': form})
     else:
@@ -24,8 +24,7 @@ def product_create(request):
 
 @login_required
 def product_list(request):
-    products = Product.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'product/product_list.html', {'products': products})
+    return redirect('product:producer_product_list')
 
 @login_required
 def product_delete(request, pk):
@@ -33,10 +32,10 @@ def product_delete(request, pk):
 
     # 自分の商品以外は削除させない
     if product.user != request.user:
-        return redirect('product_list')
+        return redirect('product:producer_product_list')
 
     product.delete()
-    return redirect('product_list')
+    return redirect('product:producer_product_list')
 
 @login_required
 def consumer_product_list(request):

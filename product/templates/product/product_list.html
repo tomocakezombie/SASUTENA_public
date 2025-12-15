@@ -1,6 +1,6 @@
 <h2>あなたの出品一覧</h2>
 
-<a href="{% url 'product_create' %}">商品を登録する</a>
+<a href="{% url 'product:product_create' %}">商品を登録する</a>
 <hr>
 
 {% if products %}
@@ -15,7 +15,7 @@
                 <img src="{{ p.item_image.url }}" width="140"><br>
             {% endif %}
 
-            <a href="{% url 'product_delete' p.item_id %}">削除</a>
+            <a href="{% url 'product:product_delete' p.item_id %}">削除</a>
         </div>
         <hr>
     {% endfor %}
