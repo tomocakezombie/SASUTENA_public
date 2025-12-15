@@ -14,7 +14,7 @@ def product_create(request):
             product = form.save(commit=False)
             product.user = request.user
             product.save()
-            return redirect('product_list')
+            return redirect('producer_product_list')
         print("フォームは無効です")
         return render(request, 'product/product_create.html', {'form': form})
     else:
@@ -42,3 +42,16 @@ def product_delete(request, pk):
 def consumer_product_list(request):
     products = Product.objects.filter(publish=True, valid=True, completed=False).order_by('-created_at')
     return render(request, 'product/consumer_product_list.html', {'products': products})
+
+@login_required
+def producer_product_list(request):
+    user = request.user
+    #自分の出品商品一覧
+    my_products = Product.objects.filter(user=user).order_by('-created_at')
+    #全体の出品商品一覧（承認前も含む）
+    all_products = Product.objects.all().order_by('-created_at')
+    
+    return render(request, 'product/producer_product_list.html', {
+        'my_products': my_products,
+        'all_products': all_products,
+    })

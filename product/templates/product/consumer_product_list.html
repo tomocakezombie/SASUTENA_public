@@ -33,12 +33,14 @@
 			{% for product in products %}
 			<article class="card shadow-sm border-0">
 				<div class="row g-0 align-items-center">
-					{% if product.item_image %}
-					<div class="col-md-3">
+					<div class="col-12 col-md-3">
+						{% if product.item_image %}
 						<img src="{{ product.item_image.url }}" alt="{{ product.item_name }}" class="img-fluid rounded-start">
+						{% else %}
+						<div class="d-flex align-items-center justify-content-center bg-light text-muted rounded-start" style="height: 100%; min-height: 160px;">No Image</div>
+						{% endif %}
 					</div>
-					{% endif %}
-					<div class="{% if product.item_image %}col-md-9{% else %}col-12{% endif %}">
+					<div class="col-12 col-md-9">
 						<div class="card-body">
 							<h3 class="h5 fw-semibold mb-2">{{ product.item_name }}</h3>
 							<p class="text-muted small mb-3">{{ product.description|default:"" }}</p>
