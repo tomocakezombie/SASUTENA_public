@@ -80,19 +80,12 @@
 
                             <div class="d-flex flex-wrap gap-2">
                                 <button type="submit" class="btn btn-primary">ログイン</button>
-                                <!-- ↓ Django版では不要なので削除してもOK -->
-                                <button type="button" class="btn btn-outline-secondary" disabled>
-                                    サンプルデータ初期化
-                                </button>
                             </div>
                         </form>
 
                     </div>
 
                     <div class="card-footer bg-transparent border-0 pt-0">
-                        <p class="small text-muted mb-2">
-                            サンプルアカウント（テスト用）：producer1 / pass, consumer1 / pass, admin / pass
-                        </p>
                         <a href="#" class="small d-inline-block mb-2">パスワードをお忘れの方はこちら</a><br>
                         <a href="{% url 'login:signup' %}" class="small">アカウントをお持ちでない方は登録申請へ</a>
                     </div>

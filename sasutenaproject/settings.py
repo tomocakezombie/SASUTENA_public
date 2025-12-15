@@ -133,7 +133,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ログイン済みか否かでのリダイレクト先設定
 LOGIN_URL = "login:index"
-LOGIN_REDIRECT_URL = "accounts:my_page"
+# LOGIN_REDIRECT_URL = "accounts:my_page"
+LOGIN_REDIRECT_URL = "product:consumer_product_list"
 
 LOGOUT_REDIRECT_URL = None # ログアウト画面を用意する設定らしい
 
