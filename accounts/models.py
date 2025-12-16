@@ -36,6 +36,7 @@ class UserEvaluation(models.Model):
         related_name='given_evaluations'
     )
     score = models.IntegerField()
+    comment = models.TextField(blank=True, null=True, verbose_name="コメント")
 
     def __str__(self):
         return f"Evaluation {self.id} - {self.target_user_id.username} by {self.from_user_id.username}"

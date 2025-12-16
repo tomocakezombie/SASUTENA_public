@@ -32,6 +32,23 @@
               未設定
             {% endif %}
           </p>
+          {% if rating_stars %}
+          <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
+            {% for star in rating_stars %}
+              {% if star == "full" %}
+              <i class="bi bi-star-fill text-warning"></i>
+              {% elif star == "half" %}
+              <i class="bi bi-star-half text-warning"></i>
+              {% else %}
+              <i class="bi bi-star text-warning"></i>
+              {% endif %}
+            {% endfor %}
+            <span class="small text-muted ms-2">({{ rating_average|floatformat:1 }})</span>
+            <span class="small text-muted">全{{ rating_count }}件</span>
+          </div>
+          {% else %}
+          <p class="small text-muted mb-2">まだ評価はありません。</p>
+          {% endif %}
           <div class="d-flex justify-content-center gap-2">
             <button type="button" id="profileEditBtn" class="btn btn-sm btn-outline-primary d-flex align-items-center">
               <i class="bi bi-pencil-square"></i><span class="ms-1">プロフィールを編集</span>
@@ -103,7 +120,7 @@
                     </div>
                   
                     <div class="col-12 col-md-6">
-                      <a href="conversations.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      <a href="{% url 'comunicate:conversation_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                         <div class="card-body d-flex align-items-start gap-3">
                           <span class="link-icon link-icon-success"><i class="bi bi-chat-dots"></i></span>
                           <div>
