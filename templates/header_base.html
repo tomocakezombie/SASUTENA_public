@@ -1,6 +1,6 @@
 {% load static %}
 
-<header>
+<header class="site-header">
   <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm sticky-top">
     <div class="container py-2">
 
@@ -8,15 +8,18 @@
       <a class="navbar-brand d-flex align-items-center gap-3" href="{% url 'accounts:my_page' %}">
         <img src="{% static 'images/SASUTENA_logo.png' %}" 
              alt="SASUTENA ロゴ" 
-             style="height:40px; width:auto;">
+             class="site-header__logo">
       </a>
 
       <!-- 右メニュー -->
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2 site-header__actions">
 
         
         {% if user.is_authenticated %}
         <!-- ▼ ログイン後：マイページメニュー -->
+        <a href="{% url 'comunicate:conversation_list'%}" type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" id="navMessagesBtn">
+          <i class="bi bi-chat-dots fs-5"></i>
+        </a>
         <div class="dropdown">
           <button type="button" 
                   class="btn btn-outline-primary d-flex align-items-center gap-2"
