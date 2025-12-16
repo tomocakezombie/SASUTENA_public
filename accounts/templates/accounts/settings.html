@@ -1,1 +1,22 @@
 <h1> 設定 ページ</h1>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <!-- {{ form.as_p }} -->
+    <div>
+        <label>ニックネーム</label><br>
+        {{ form.nick_name }}
+    </div>
+    <div>
+        <label>公開設定</label><br>
+        {{ form.publish_profile }}
+    </div>
+    <div>
+        <label>メール受信設定</label><br>
+        {{ form.mail_allow }}
+    </div>
+    <div>
+        <label>アイコン画像</label><br>
+        {{ form.icon_image }}
+    </div>
+    <button type="submit">保存</button>
+</form>

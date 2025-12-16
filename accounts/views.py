@@ -1,9 +1,13 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from .models import UserProfile
+from .forms import userSettings
 
 
 User = get_user_model()
@@ -63,16 +67,18 @@ def settings(request):
 		},
 	)
 
-	if request.method == "POST":
-		nick_name = request.POST.get("nick_name", "").strip()
-		publish_profile = request.POST.get("publish_profile") == "on"
-		mail_allow = request.POST.get("mail_allow") == "on"
+	form = userSettings(
+		request.POST or None,
+		request.FILES or None,
+		instance=profile,
+	)
 
-		profile.nick_name = nick_name
-		profile.publish_profile = publish_profile
-		profile.mail_allow = mail_allow
-		profile.save()
-
+	if request.method == "POST" and form.is_valid():
+		updated_profile = form.save(commit=False)
+		if not updated_profile.nick_name:
+			updated_profile.nick_name = request.user.username
+		updated_profile.save()
+		form.save_m2m()
 		return redirect("accounts:my_page")
 
 	return render(
@@ -80,5 +86,41 @@ def settings(request):
 		"accounts/settings.html",
 		{
 			"profile": profile,
+			"form": form,
 		},
 	)
+
+@require_POST
+@login_required
+def update_profile_bio(request):
+	"""Persist profile bio updates triggered from the profile page."""
+	profile, _created = UserProfile.objects.get_or_create(
+		user=request.user,
+		defaults={
+			"nick_name": request.user.username,
+			"publish_profile": True,
+			"mail_allow": True,
+		},
+	)
+
+	if request.headers.get("Content-Type", "").startswith("application/json"):
+		try:
+			payload = json.loads(request.body.decode("utf-8") or "{}")
+		except json.JSONDecodeError:
+			payload = {}
+	else:
+		payload = request.POST
+
+	raw_bio = payload.get("content_profile", "")
+	if not isinstance(raw_bio, str):
+		raw_bio = ""
+
+	new_bio = raw_bio.strip()
+	if len(new_bio) > 100:
+		return JsonResponse({"success": False, "error": "BIO_TOO_LONG"}, status=400)
+
+	profile.content_profile = new_bio
+	profile.save(update_fields=["content_profile"])
+
+	return JsonResponse({"success": True, "bio": new_bio})
+
