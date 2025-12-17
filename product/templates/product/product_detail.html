@@ -74,7 +74,7 @@
 							<a class="btn btn-outline-primary disabled" href="#" tabindex="-1" aria-disabled="true">編集（審査中）</a>
 							<a class="btn btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
 						{% elif show_apply_button %}
-							<button type="button" class="btn btn-primary">申込み</button>
+							<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applicationModal">申込み</button>
 						{% endif %}
 					</div>
 				</div>
@@ -110,4 +110,50 @@
 		</div>
 	</div>
 </section>
+{% if show_apply_button %}
+<div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="applicationModalLabel">商品申込みメッセージ</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form method="post" class="needs-validation" novalidate>
+				<div class="modal-body">
+					{% csrf_token %}
+					<div class="mb-3">
+						<label for="applicationMessage" class="form-label">メッセージ</label>
+						<textarea class="form-control" id="applicationMessage" name="message" rows="4" placeholder="受け取り希望：いつでも可、場所日時相談" required></textarea>
+						<div class="invalid-feedback">メッセージを入力してください。</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+					<button type="submit" class="btn btn-primary">OK</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+	{{ block.super }}
+	{% if show_apply_button %}
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			var modalElement = document.getElementById('applicationModal');
+			if (!modalElement) {
+				return;
+			}
+			modalElement.addEventListener('shown.bs.modal', function () {
+				var textarea = document.getElementById('applicationMessage');
+				if (textarea) {
+					textarea.focus();
+				}
+			});
+		});
+	</script>
+	{% endif %}
 {% endblock %}
