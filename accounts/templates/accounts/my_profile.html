@@ -86,7 +86,7 @@
                 <p id="profileBioText" class="mb-0 text-muted">自己紹介はまだ設定されていません。</p>
                 {% endif %}
               </div>
-              <div id="profileBioEditor" class="mb-3 d-none">
+              <div id="profileBioEditor" class="mb-3 d-none" data-update-url="{% url 'accounts:update_profile_bio' %}">
                 <label for="bioText" class="form-label small">自己紹介（プロフィール）</label>
                 <textarea id="bioText" class="form-control mb-2" rows="4" placeholder="自己紹介を入力してください" maxlength="100">{% if profile and profile.content_profile %}{{ profile.content_profile }}{% endif %}</textarea>
                 <div class="form-text">100文字以内で入力してください。</div>

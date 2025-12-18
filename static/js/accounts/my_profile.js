@@ -14,9 +14,9 @@
     const textarea = document.getElementById('bioText');
     const messageEl = document.getElementById('profileBioMessage');
     const dataEl = document.getElementById('initial-profile-bio');
-    const updateUrl = '{% url "accounts:update_profile_bio" %}';
+    const updateUrl = editor && editor.dataset ? (editor.dataset.updateUrl || '') : '';
 
-    if (!editBtn || !editor || !display || !textEl || !saveBtn || !cancelBtn || !textarea) {
+    if (!editBtn || !editor || !display || !textEl || !saveBtn || !cancelBtn || !textarea || !updateUrl) {
       return;
     }
 
