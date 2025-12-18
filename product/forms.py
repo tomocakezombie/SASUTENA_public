@@ -4,7 +4,7 @@ from django import forms
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Product
+from .models import Product, ProductApplication
 
 
 class ProductForm(forms.ModelForm):
@@ -85,4 +85,22 @@ class ProductForm(forms.ModelForm):
         if commit:
             product.save()
         return product
-        
+
+
+class ProductApplicationForm(forms.ModelForm):
+    message = forms.CharField(
+        label="メッセージ",
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "受け取り希望：いつでも可、場所日時相談",
+                "maxlength": 255,
+            }
+        ),
+    )
+
+    class Meta:
+        model = ProductApplication
+        fields = ["message"]
+
