@@ -1,8 +1,9 @@
 from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .forms import ProductForm
-from .models import Product
+from .forms import ProductForm, ProductApplicationForm
+from .models import Product, ProductApplication
 
 @login_required
 def product_create(request):
@@ -61,8 +62,48 @@ def product_detail(request, pk):
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
+    applications = product.applications.select_related('user')
+    user_application = applications.filter(user=request.user).first()
+
+    can_apply = (
+        (user_role in consumer_roles)
+        and not is_owner
+        and product.publish
+        and product.valid
+        and not product.completed
+    )
+
+    form = None
+
+    if request.method == 'POST':
+        if not can_apply:
+            messages.warning(request, 'この商品には申込みできません。')
+            return redirect('product:product_detail', pk=product.pk)
+
+        if user_application:
+            messages.info(request, 'すでに申込み済みです。')
+            return redirect('product:product_detail', pk=product.pk)
+
+        form = ProductApplicationForm(request.POST)
+        if form.is_valid():
+            ProductApplication.objects.create(
+                product=product,
+                user=request.user,
+                hope_time=form.cleaned_data.get('hope_time'),
+                quantity=form.cleaned_data.get('quantity') or 1,
+                message=form.cleaned_data.get('message', ''),
+            )
+            messages.success(request, '申込みを送信しました。生産者からの連絡をお待ちください。')
+            return redirect('product:product_detail', pk=product.pk)
+    else:
+        if can_apply and not user_application:
+            form = ProductApplicationForm()
+
     return render(request, 'product/product_detail.html', {
         'product': product,
         'is_owner': is_owner,
-        'show_apply_button': (user_role in consumer_roles) and not is_owner,
+        'applications': applications.order_by('-apply_time'),
+        'show_apply_button': can_apply and user_application is None,
+        'application_form': form,
+        'user_application': user_application,
     })

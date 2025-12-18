@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Product
+from .models import Product, ProductApplication
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -21,3 +21,20 @@ class ProductAdmin(admin.ModelAdmin):
     
     def tags(self, obj):
         return ", ".join(tag.name for tag in obj.tags.all())
+
+
+@admin.register(ProductApplication)
+class ProductApplicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "apply_id",
+        "product",
+        "user",
+        "quantity",
+        "hope_time",
+        "message",
+        "apply_status",
+        "apply_time",
+    )
+    list_filter = ("apply_status", "apply_time")
+    search_fields = ("product__item_name", "user__username")
+    readonly_fields = ("apply_time",)
