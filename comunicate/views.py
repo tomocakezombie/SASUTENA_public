@@ -11,6 +11,7 @@ from django.urls import reverse
 
 from .forms import MessageEditForm, MessageForm
 from .models import Message
+from accounts.models import UserProfile
 from product.models import Product
 
 User = get_user_model()
@@ -170,6 +171,44 @@ def conversation_list(request):
             elif not requested_item_id and not thread_item:
                 requested_thread_url = thread_url
 
+    def _ensure_thread(entry, counterpart, product_obj):
+        threads_map = entry["threads"]
+        key = product_obj.pk if product_obj else None
+        if key in threads_map:
+            return
+        if product_obj:
+            thread_url = reverse(
+                "comunicate:conversation_detail_item",
+                kwargs={"username": counterpart.username, "item_id": product_obj.pk},
+            )
+        else:
+            thread_url = reverse("comunicate:conversation_detail", kwargs={"username": counterpart.username})
+        threads_map[key] = {
+            "item": product_obj,
+            "thread_url": thread_url,
+            "preview_author": "未開始",
+            "preview": "メッセージはまだありません。",
+            "latest_time": None,
+            "unread": False,
+        }
+
+    for entry in user_threads.values():
+        counterpart = entry["counterpart"]
+        _ensure_thread(entry, counterpart, None)
+        for product in entry.get("products", []):
+            _ensure_thread(entry, counterpart, product)
+
+    if requested_username and not requested_thread_url:
+        target_entry = next(
+            (entry for entry in user_threads.values() if entry["counterpart"].username == requested_username),
+            None,
+        )
+        if target_entry:
+            key = int(requested_item_id) if requested_item_id else None
+            thread_data = target_entry["threads"].get(key)
+            if thread_data:
+                requested_thread_url = thread_data["thread_url"]
+
     user_entries = []
     for entry in user_threads.values():
         threads = list(entry["threads"].values())
@@ -178,7 +217,6 @@ def conversation_list(request):
             "threads": threads,
             "has_threads": bool(threads),
             "unread": entry["unread"],
-            "products": entry["products"],
         }
         user_entries.append(entry_data)
         if not threads and requested_username == entry["counterpart"].username and not requested_thread_url:
@@ -236,6 +274,21 @@ def conversation_detail(request, username, item_id=None):
 
     initial = {"item": thread_item}
     participant_ids = {request.user.pk, target_user.pk}
+    participant_profiles = UserProfile.objects.filter(user_id__in=participant_ids)
+    icon_map = {}
+    for profile in participant_profiles:
+        if profile.icon_image:
+            try:
+                icon_map[profile.user_id] = profile.icon_image.url
+            except ValueError:
+                icon_map.setdefault(profile.user_id, "")
+        else:
+            icon_map.setdefault(profile.user_id, "")
+    for user_id in participant_ids:
+        icon_map.setdefault(user_id, "")
+    for message in messages_qs:
+        message.sender_icon_url = icon_map.get(message.send_user_id, "")
+
     form = MessageForm(initial=initial)
     form.fields["item"].queryset = Product.objects.filter(user_id__in=participant_ids).order_by("item_name")
     if thread_item or request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -265,6 +318,7 @@ def conversation_detail(request, username, item_id=None):
         "form": form,
         "thread_item": thread_item,
         "thread_url": request.path,
+        "participant_icons": icon_map,
     }
     return render(request, template_name, context)
 

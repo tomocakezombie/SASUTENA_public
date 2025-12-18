@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
+<style>
+  .thread-list-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .thread-group .thread-controls {
+    position: relative;
+    z-index: 1;
+  }
+</style>
 <div class="container py-4">
   <div class="row g-4">
     <div class="col-lg-4">
@@ -30,7 +40,7 @@
                 {% if first_thread %}
                   最新: {{ first_thread.preview_author }}: {{ first_thread.preview|truncatechars:40 }}
                 {% else %}
-                  新しいスレッドを開始できます
+                  メッセージはまだありません
                 {% endif %}
               </div>
             </div>
@@ -61,32 +71,14 @@
         <div class="card-body bg-light d-flex flex-column gap-3">
           <section id="threadPicker">
             {% for entry in user_entries %}
-            <div class="thread-group d-none" data-thread-username="{{ entry.counterpart.username }}">
-                <div class="thread-controls mb-3">
-                <div class="thread-new border rounded-3 p-3 bg-white">
-                  <p class="small text-muted mb-2">{{ entry.counterpart.username }} さんとの新しいトークを開始</p>
-                  <div class="input-group">
-                      <select class="form-select thread-item-select" data-username="{{ entry.counterpart.username }}">
-                        <option value="">商品指定なし</option>
-                        {% for product in entry.products %}
-                        <option value="{{ product.pk }}">
-                          {{ product.item_name }}
-                          {% if product.user_id == entry.counterpart.pk %}
-                          （{{ entry.counterpart.username }}）
-                          {% elif product.user_id == request.user.pk %}
-                          （あなたの登録）
-                          {% else %}
-                          （{{ product.user.username }}）
-                          {% endif %}
-                        </option>
-                        {% endfor %}
-                      </select>
-                      <button type="button" class="btn btn-outline-primary thread-start-btn" data-username="{{ entry.counterpart.username }}">開始</button>
-                      <button type="button" class="btn btn-outline-secondary thread-search-toggle" data-username="{{ entry.counterpart.username }}">検索</button>
-                  </div>
-                  <small class="text-muted d-block mt-2">商品は空欄のままでも「開始」でスレッドを開けます。</small>
-                </div>
-                  <div class="thread-search mt-3 d-none" data-username="{{ entry.counterpart.username }}">
+                <div class="thread-group d-none" data-thread-username="{{ entry.counterpart.username }}">
+                  <div class="thread-controls mb-3">
+                    <div class="d-flex justify-content-end">
+                      <button type="button" class="btn btn-outline-secondary btn-sm thread-search-toggle" data-username="{{ entry.counterpart.username }}">
+                        スレッドを検索
+                      </button>
+                    </div>
+                    <div class="thread-search mt-2 d-none" data-username="{{ entry.counterpart.username }}">
                     <div class="input-group input-group-sm">
                       <span class="input-group-text">検索</span>
                       <input type="search"
@@ -98,7 +90,7 @@
                     <small class="text-muted">キーワードでスレッドを絞り込めます。</small>
                   </div>
               </div>
-              <div class="list-group thread-list mb-2">
+                <div class="list-group thread-list thread-list-scroll mb-2">
                 {% for thread in entry.threads %}
                 <button type="button"
                         class="list-group-item list-group-item-action d-flex justify-content-between align-items-start thread-button"
@@ -117,7 +109,7 @@
                 {% endfor %}
               </div>
               <p class="thread-search-empty text-muted small d-none">一致するスレッドが見つかりません。</p>
-              <p class="thread-empty-message text-muted small mb-0{% if entry.has_threads %} d-none{% endif %}">まだスレッドはありません。「商品指定なし」のままでも開始できます。</p>
+              <p class="thread-empty-message text-muted small mb-0{% if entry.has_threads %} d-none{% endif %}">まだスレッドはありません。</p>
             </div>
             {% endfor %}
           </section>
@@ -214,9 +206,13 @@
     if (!searchWrapper) {
       return;
     }
+    const list = group.querySelector('.thread-list');
     const input = searchWrapper.querySelector('.thread-search-input');
     if (searchWrapper.classList.contains('d-none')) {
       searchWrapper.classList.remove('d-none');
+      if (list) {
+        list.classList.add('opacity-75');
+      }
       if (input) {
         attachSearchInput(input);
         updateSearchState(input);
@@ -226,6 +222,9 @@
       if (input) {
         input.value = '';
         updateSearchState(input);
+      }
+      if (list) {
+        list.classList.remove('opacity-75');
       }
       searchWrapper.classList.add('d-none');
     }
@@ -238,6 +237,21 @@
       }
       button.addEventListener('click', () => {
         toggleThreadSearch(button.dataset.username);
+      });
+      button.dataset.bound = 'true';
+    });
+  }
+
+  function attachThreadButtons() {
+    document.querySelectorAll('.thread-button').forEach(button => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.addEventListener('click', () => {
+        const threadUrl = button.dataset.threadUrl || '';
+        if (threadUrl) {
+          loadConversation(threadUrl, button);
+        }
       });
       button.dataset.bound = 'true';
     });
@@ -286,16 +300,16 @@
         updateSearchState(searchInput);
         searchInput.focus();
       } else {
-        const itemSelect = activeGroup.querySelector('.thread-new select');
-        if (itemSelect) {
-          itemSelect.focus();
+        const firstThread = activeGroup.querySelector('.thread-button');
+        if (firstThread) {
+          firstThread.focus();
         }
       }
     }
   }
 
   function clearConversation(username) {
-    content.innerHTML = '<p class="text-muted small mb-0">' + (username ? 'トークを選択、または「開始」で新しいトークを開いてください。' : 'ユーザーとトークを選択するとここに表示されます。') + '</p>';
+    content.innerHTML = '<p class="text-muted small mb-0">' + (username ? 'トークを選択してください。' : 'ユーザーとトークを選択するとここに表示されます。') + '</p>';
     formWrapper.hidden = true;
     formWrapper.innerHTML = '';
     currentUrl = '';
@@ -396,14 +410,14 @@
     if (!group) {
       return null;
     }
-    const list = group.querySelector('.thread-list');
-    if (!list) {
+    const threadList = group.querySelector('.thread-list');
+    if (!threadList) {
       return null;
     }
 
-    let button = list.querySelector('.thread-button[data-thread-url="' + threadUrl + '"]');
-    const messageBody = threadElement.querySelector('.conversation-bubble__body');
-    const authorNode = threadElement.querySelector('.conversation-bubble__meta .fw-semibold');
+    let button = threadList.querySelector('.thread-button[data-thread-url="' + threadUrl + '"]');
+    const messageBody = threadElement.querySelector('.message-body');
+    const authorNode = threadElement.querySelector('.message-author');
     const messageText = messageBody ? messageBody.textContent.trim() : '';
     const previewContent = messageText ? messageText.slice(0, 40) : 'メッセージはまだありません';
     const authorLabel = authorNode ? authorNode.textContent.trim() : '';
@@ -435,7 +449,8 @@
       button.addEventListener('click', () => {
         loadConversation(threadUrl, button);
       });
-      list.appendChild(button);
+      button.dataset.bound = 'true';
+      threadList.appendChild(button);
       const emptyMessage = group.querySelector('.thread-empty-message');
       if (emptyMessage) {
         emptyMessage.classList.add('d-none');
@@ -459,6 +474,7 @@
       }
       button.dataset.itemName = itemName;
       button.dataset.itemId = threadElement.dataset.itemId || '';
+      button.dataset.bound = 'true';
     }
     const controls = group.querySelector('.thread-controls') || group;
     let searchWrapper = group.querySelector('.thread-search');
@@ -485,10 +501,6 @@
       }
     }
     const searchInput = searchWrapper.querySelector('.thread-search-input');
-    const newWrapper = group.querySelector('.thread-new');
-    if (newWrapper) {
-      newWrapper.classList.remove('d-none');
-    }
     const emptyMessage = group.querySelector('.thread-empty-message');
     if (emptyMessage) {
       emptyMessage.classList.add('d-none');
@@ -498,12 +510,16 @@
       const emptyNotice = document.createElement('p');
       emptyNotice.className = 'thread-search-empty text-muted small d-none';
       emptyNotice.textContent = '一致するスレッドが見つかりません。';
-      list.insertAdjacentElement('afterend', emptyNotice);
+      threadList.insertAdjacentElement('afterend', emptyNotice);
     }
     if (searchInput) {
       attachSearchInput(searchInput);
       updateSearchState(searchInput);
     }
+    if (threadList) {
+      threadList.classList.remove('opacity-75');
+    }
+    attachSearchToggle();
     return button;
   }
 
@@ -524,8 +540,8 @@
       threadLabel.textContent = 'スレッド: ' + itemName;
     }
     if (previewLabel) {
-      const messageBody = threadElement.querySelector('.conversation-bubble__body');
-      const authorNode = threadElement.querySelector('.conversation-bubble__meta .fw-semibold');
+      const messageBody = threadElement.querySelector('.message-body');
+      const authorNode = threadElement.querySelector('.message-author');
       const messageText = messageBody ? messageBody.textContent.trim() : '';
       const previewContent = messageText ? messageText.slice(0, 40) : 'メッセージはまだありません';
       const authorLabel = authorNode ? authorNode.textContent.trim() : '';
@@ -641,33 +657,7 @@
 
   attachThreadSearch();
   attachSearchToggle();
-
-  function startThreadForUser(username, itemValue) {
-    if (!username) {
-      return;
-    }
-    let url = '/messages/thread/' + encodeURIComponent(username) + '/';
-    if (itemValue) {
-      url += 'item/' + encodeURIComponent(itemValue) + '/';
-    }
-    const sameUserSelected = selectedUserButton && selectedUserButton.dataset.username === username;
-    const userButton = userList ? userList.querySelector('.conversation-user[data-username="' + username + '"]') : null;
-    if (userButton && !sameUserSelected) {
-      selectUser(userButton, {autoThreadUrl: url});
-      return;
-    }
-    loadConversation(url, null);
-  }
-
-  document.querySelectorAll('.thread-start-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      const username = button.dataset.username;
-      const wrapper = button.closest('.thread-new');
-      const select = wrapper ? wrapper.querySelector('.thread-item-select') : null;
-      const itemValue = select ? select.value : '';
-      startThreadForUser(username, itemValue);
-    });
-  });
+  attachThreadButtons();
 
   const initialUsername = card.dataset.initialUsername;
   const initialUrl = card.dataset.initialUrl;
