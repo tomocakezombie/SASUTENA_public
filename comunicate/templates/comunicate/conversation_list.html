@@ -62,31 +62,41 @@
           <section id="threadPicker">
             {% for entry in user_entries %}
             <div class="thread-group d-none" data-thread-username="{{ entry.counterpart.username }}">
-              <div class="thread-controls mb-3">
-                <div class="thread-search mb-2{% if not entry.has_threads %} d-none{% endif %}">
-                  <div class="input-group input-group-sm">
-                    <span class="input-group-text">検索</span>
-                    <input type="search"
-                           class="form-control thread-search-input"
-                           data-username="{{ entry.counterpart.username }}"
-                           placeholder="スレッド名を検索" autocomplete="off">
-                    <button type="button" class="btn btn-outline-secondary thread-search-clear" title="検索条件をクリア">クリア</button>
-                  </div>
-                  <small class="text-muted">キーワードでスレッドを絞り込めます。</small>
-                </div>
-                <div class="thread-new border rounded-3 p-3 bg-white{% if entry.has_threads %} d-none{% endif %}">
+                <div class="thread-controls mb-3">
+                <div class="thread-new border rounded-3 p-3 bg-white">
                   <p class="small text-muted mb-2">{{ entry.counterpart.username }} さんとの新しいトークを開始</p>
                   <div class="input-group">
-                    <select class="form-select thread-item-select" data-username="{{ entry.counterpart.username }}">
-                      <option value="">商品指定なし</option>
-                      {% for product in entry.products %}
-                      <option value="{{ product.pk }}">{{ product.item_name }}</option>
-                      {% endfor %}
-                    </select>
-                    <button type="button" class="btn btn-outline-primary thread-start-btn" data-username="{{ entry.counterpart.username }}">開始</button>
+                      <select class="form-select thread-item-select" data-username="{{ entry.counterpart.username }}">
+                        <option value="">商品指定なし</option>
+                        {% for product in entry.products %}
+                        <option value="{{ product.pk }}">
+                          {{ product.item_name }}
+                          {% if product.user_id == entry.counterpart.pk %}
+                          （{{ entry.counterpart.username }}）
+                          {% elif product.user_id == request.user.pk %}
+                          （あなたの登録）
+                          {% else %}
+                          （{{ product.user.username }}）
+                          {% endif %}
+                        </option>
+                        {% endfor %}
+                      </select>
+                      <button type="button" class="btn btn-outline-primary thread-start-btn" data-username="{{ entry.counterpart.username }}">開始</button>
+                      <button type="button" class="btn btn-outline-secondary thread-search-toggle" data-username="{{ entry.counterpart.username }}">検索</button>
                   </div>
                   <small class="text-muted d-block mt-2">商品は空欄のままでも「開始」でスレッドを開けます。</small>
                 </div>
+                  <div class="thread-search mt-3 d-none" data-username="{{ entry.counterpart.username }}">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text">検索</span>
+                      <input type="search"
+                             class="form-control thread-search-input"
+                             data-username="{{ entry.counterpart.username }}"
+                             placeholder="スレッド名を検索" autocomplete="off">
+                      <button type="button" class="btn btn-outline-secondary thread-search-clear" title="検索条件をクリア">クリア</button>
+                    </div>
+                    <small class="text-muted">キーワードでスレッドを絞り込めます。</small>
+                  </div>
               </div>
               <div class="list-group thread-list mb-2">
                 {% for thread in entry.threads %}
@@ -193,6 +203,44 @@
 
   function attachThreadSearch() {
     document.querySelectorAll('.thread-search-input').forEach(attachSearchInput);
+  }
+
+  function toggleThreadSearch(username) {
+    const group = getThreadGroup(username);
+    if (!group) {
+      return;
+    }
+    const searchWrapper = group.querySelector('.thread-search');
+    if (!searchWrapper) {
+      return;
+    }
+    const input = searchWrapper.querySelector('.thread-search-input');
+    if (searchWrapper.classList.contains('d-none')) {
+      searchWrapper.classList.remove('d-none');
+      if (input) {
+        attachSearchInput(input);
+        updateSearchState(input);
+        input.focus();
+      }
+    } else {
+      if (input) {
+        input.value = '';
+        updateSearchState(input);
+      }
+      searchWrapper.classList.add('d-none');
+    }
+  }
+
+  function attachSearchToggle() {
+    document.querySelectorAll('.thread-search-toggle').forEach(button => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.addEventListener('click', () => {
+        toggleThreadSearch(button.dataset.username);
+      });
+      button.dataset.bound = 'true';
+    });
   }
 
   function setActiveUser(button) {
@@ -416,7 +464,8 @@
     let searchWrapper = group.querySelector('.thread-search');
     if (!searchWrapper) {
       searchWrapper = document.createElement('div');
-      searchWrapper.className = 'thread-search mb-2';
+      searchWrapper.className = 'thread-search mb-2 d-none';
+      searchWrapper.dataset.username = username;
       searchWrapper.innerHTML = `
         <div class="input-group input-group-sm">
           <span class="input-group-text">検索</span>
@@ -435,11 +484,10 @@
         controls.appendChild(searchWrapper);
       }
     }
-    searchWrapper.classList.remove('d-none');
     const searchInput = searchWrapper.querySelector('.thread-search-input');
     const newWrapper = group.querySelector('.thread-new');
     if (newWrapper) {
-      newWrapper.classList.add('d-none');
+      newWrapper.classList.remove('d-none');
     }
     const emptyMessage = group.querySelector('.thread-empty-message');
     if (emptyMessage) {
@@ -592,6 +640,7 @@
   }
 
   attachThreadSearch();
+  attachSearchToggle();
 
   function startThreadForUser(username, itemValue) {
     if (!username) {
