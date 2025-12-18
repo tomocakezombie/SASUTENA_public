@@ -11,9 +11,26 @@ from django.urls import reverse
 
 from .forms import MessageEditForm, MessageForm
 from .models import Message
+from accounts.models import UserProfile
 from product.models import Product
 
 User = get_user_model()
+
+
+def _allowed_counterparts_for(current_user):
+    qs = User.objects.exclude(pk=current_user.pk)
+    if current_user.is_staff or current_user.is_superuser:
+        return qs
+
+    role = getattr(current_user, "role", None)
+    producer_roles = {"producer", "proceduct"}
+    base_filter = Q(is_staff=True) | Q(is_superuser=True)
+    if role in producer_roles:
+        base_filter |= Q(role="consumer")
+    elif role == "consumer":
+        base_filter |= Q(role__in=producer_roles)
+
+    return qs.filter(base_filter)
 
 
 def _conversation_key(current_user, message):
@@ -37,16 +54,37 @@ def _conversation_queryset(current_user, counterpart, thread_item):
 @login_required
 def conversation_list(request):
     user = request.user
-    all_users = User.objects.exclude(pk=user.pk).order_by("username")
-    products_by_user = {}
-    for product in Product.objects.filter(user__in=all_users).order_by("item_name"):
-        products_by_user.setdefault(product.user_id, []).append(product)
+    allowed_users_qs = _allowed_counterparts_for(user).order_by("username")
+    all_users = list(allowed_users_qs)
 
-    message_queryset = (
-        Message.objects.filter(Q(send_user=user) | Q(receive_user=user), delete_flag=False)
-        .select_related("send_user", "receive_user", "item")
-        .order_by("-send_time")
-    )
+    allowed_user_ids = [counterpart.pk for counterpart in all_users]
+    product_owner_ids = set(allowed_user_ids)
+    product_owner_ids.add(user.pk)
+
+    products_by_user = {}
+    if product_owner_ids:
+        product_queryset = (
+            Product.objects.filter(user_id__in=product_owner_ids)
+            .select_related("user")
+            .order_by("item_name")
+        )
+        for product in product_queryset:
+            products_by_user.setdefault(product.user_id, []).append(product)
+
+    if allowed_user_ids:
+        message_queryset = (
+            Message.objects.filter(
+                (
+                    Q(send_user=user, receive_user_id__in=allowed_user_ids)
+                    | Q(receive_user=user, send_user_id__in=allowed_user_ids)
+                ),
+                delete_flag=False,
+            )
+            .select_related("send_user", "receive_user", "item")
+            .order_by("-send_time")
+        )
+    else:
+        message_queryset = Message.objects.none()
 
     conversations = OrderedDict()
     for msg in message_queryset:
@@ -69,12 +107,23 @@ def conversation_list(request):
 
     user_threads = OrderedDict()
 
+    current_user_products = list(products_by_user.get(user.pk, []))
+    include_own_products = bool(current_user_products) and (
+        getattr(user, "role", None) in {"producer", "proceduct"} or user.is_staff or user.is_superuser
+    )
+
     for counterpart in all_users:
+        combined_products = OrderedDict()
+        for product in products_by_user.get(counterpart.pk, []):
+            combined_products[product.pk] = product
+        if include_own_products and counterpart.pk != user.pk:
+            for product in current_user_products:
+                combined_products.setdefault(product.pk, product)
         user_threads[counterpart.pk] = {
             "counterpart": counterpart,
             "threads": OrderedDict(),
             "unread": False,
-            "products": list(products_by_user.get(counterpart.pk, [])),
+            "products": list(combined_products.values()),
         }
 
     for data in conversations.values():
@@ -122,6 +171,44 @@ def conversation_list(request):
             elif not requested_item_id and not thread_item:
                 requested_thread_url = thread_url
 
+    def _ensure_thread(entry, counterpart, product_obj):
+        threads_map = entry["threads"]
+        key = product_obj.pk if product_obj else None
+        if key in threads_map:
+            return
+        if product_obj:
+            thread_url = reverse(
+                "comunicate:conversation_detail_item",
+                kwargs={"username": counterpart.username, "item_id": product_obj.pk},
+            )
+        else:
+            thread_url = reverse("comunicate:conversation_detail", kwargs={"username": counterpart.username})
+        threads_map[key] = {
+            "item": product_obj,
+            "thread_url": thread_url,
+            "preview_author": "未開始",
+            "preview": "メッセージはまだありません。",
+            "latest_time": None,
+            "unread": False,
+        }
+
+    for entry in user_threads.values():
+        counterpart = entry["counterpart"]
+        _ensure_thread(entry, counterpart, None)
+        for product in entry.get("products", []):
+            _ensure_thread(entry, counterpart, product)
+
+    if requested_username and not requested_thread_url:
+        target_entry = next(
+            (entry for entry in user_threads.values() if entry["counterpart"].username == requested_username),
+            None,
+        )
+        if target_entry:
+            key = int(requested_item_id) if requested_item_id else None
+            thread_data = target_entry["threads"].get(key)
+            if thread_data:
+                requested_thread_url = thread_data["thread_url"]
+
     user_entries = []
     for entry in user_threads.values():
         threads = list(entry["threads"].values())
@@ -130,7 +217,6 @@ def conversation_list(request):
             "threads": threads,
             "has_threads": bool(threads),
             "unread": entry["unread"],
-            "products": entry["products"],
         }
         user_entries.append(entry_data)
         if not threads and requested_username == entry["counterpart"].username and not requested_thread_url:
@@ -170,11 +256,15 @@ def conversation_detail(request, username, item_id=None):
     if target_user == request.user:
         return redirect("comunicate:conversation_list")
 
+    if not (request.user.is_staff or request.user.is_superuser):
+        if not _allowed_counterparts_for(request.user).filter(pk=target_user.pk).exists():
+            raise Http404("このユーザーとは会話できません。")
+
     thread_item = None
     if item_id is not None:
         thread_item = get_object_or_404(Product, pk=item_id)
-        if thread_item.user_id != target_user.pk:
-            raise Http404("指定された商品はこのユーザーのものではありません。")
+        if thread_item.user_id not in {target_user.pk, request.user.pk}:
+            raise Http404("指定された商品は会話参加者のものではありません。")
 
     messages_qs = list(_conversation_queryset(request.user, target_user, thread_item))
     _apply_read_flags(request.user, messages_qs)
@@ -183,14 +273,30 @@ def conversation_detail(request, username, item_id=None):
         thread_item = messages_qs[0].item
 
     initial = {"item": thread_item}
+    participant_ids = {request.user.pk, target_user.pk}
+    participant_profiles = UserProfile.objects.filter(user_id__in=participant_ids)
+    icon_map = {}
+    for profile in participant_profiles:
+        if profile.icon_image:
+            try:
+                icon_map[profile.user_id] = profile.icon_image.url
+            except ValueError:
+                icon_map.setdefault(profile.user_id, "")
+        else:
+            icon_map.setdefault(profile.user_id, "")
+    for user_id in participant_ids:
+        icon_map.setdefault(user_id, "")
+    for message in messages_qs:
+        message.sender_icon_url = icon_map.get(message.send_user_id, "")
+
     form = MessageForm(initial=initial)
-    form.fields["item"].queryset = Product.objects.filter(user=target_user).order_by("item_name")
+    form.fields["item"].queryset = Product.objects.filter(user_id__in=participant_ids).order_by("item_name")
     if thread_item or request.headers.get("x-requested-with") == "XMLHttpRequest":
         form.fields["item"].widget = django_forms.HiddenInput()
 
     if request.method == "POST":
         form = MessageForm(request.POST, initial=initial)
-        form.fields["item"].queryset = Product.objects.filter(user=target_user).order_by("item_name")
+        form.fields["item"].queryset = Product.objects.filter(user_id__in=participant_ids).order_by("item_name")
         if thread_item or request.headers.get("x-requested-with") == "XMLHttpRequest":
             form.fields["item"].widget = django_forms.HiddenInput()
         if form.is_valid():
@@ -212,6 +318,7 @@ def conversation_detail(request, username, item_id=None):
         "form": form,
         "thread_item": thread_item,
         "thread_url": request.path,
+        "participant_icons": icon_map,
     }
     return render(request, template_name, context)
 

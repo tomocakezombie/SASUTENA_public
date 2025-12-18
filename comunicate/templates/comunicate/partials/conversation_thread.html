@@ -1,93 +1,160 @@
 <div class="conversation-thread" data-thread-url="{{ thread_url }}" data-counterpart="{{ target_user.username }}" data-item-name="{% if thread_item %}{{ thread_item.item_name }}{% else %}商品指定なし{% endif %}" data-item-id="{% if thread_item %}{{ thread_item.pk }}{% endif %}">
   <style>
-  .conversation-thread__messages {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 1rem 0.25rem;
-  }
-  .conversation-thread__messages::-webkit-scrollbar {
-    width: 6px;
-  }
-  .conversation-thread__messages::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-  }
-  .conversation-bubble {
-    max-width: 75%;
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    background-color: #ffffff;
-  }
-  .conversation-bubble.self {
-    margin-left: auto;
-    background-color: #0d6efd;
-    color: #ffffff;
-  }
-  .conversation-bubble.self .conversation-bubble__meta span {
-    color: rgba(255, 255, 255, 0.7);
-  }
-  .conversation-bubble.other {
-    margin-right: auto;
-    background-color: #ffffff;
-  }
-  .conversation-bubble__meta {
-    font-size: 0.75rem;
-    margin-bottom: 0.35rem;
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-  .conversation-bubble__body {
-    font-size: 0.9rem;
-    word-break: break-word;
-  }
-  .conversation-bubble__flags {
-    margin-top: 0.35rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-  }
-  .conversation-thread__form textarea {
-    resize: none;
-  }
+    .conversation-thread__messages {
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 1rem 0.25rem;
+    }
+    .conversation-thread__messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .conversation-thread__messages::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+    }
+    .message-row {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+    .message-row.self {
+      justify-content: flex-end;
+    }
+    .message-row.other {
+      justify-content: flex-start;
+    }
+    .message-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #dee2e6;
+      text-decoration: none;
+      color: #495057;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .message-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .message-avatar.self {
+      margin-left: 0.15rem;
+    }
+    .message-avatar.other {
+      margin-right: 0.15rem;
+    }
+    .message-time {
+      font-size: 0.75rem;
+      color: #6c757d;
+    }
+    .message-bubble {
+      max-width: 75%;
+      border-radius: 1.25rem;
+      padding: 0.65rem 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      position: relative;
+      background-color: #ffffff;
+    }
+    .message-bubble.self {
+      background-color: #0d6efd;
+      color: #ffffff;
+      border-bottom-right-radius: 0.35rem;
+    }
+    .message-bubble.other {
+      background-color: #f1f3f5;
+      border-bottom-left-radius: 0.35rem;
+    }
+    .message-author {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .message-body {
+      font-size: 0.95rem;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .message-flags {
+      margin-top: 0.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+    }
+    .message-menu {
+      line-height: 1;
+    }
+    .conversation-thread__form textarea {
+      resize: none;
+    }
   </style>
 
   <div class="conversation-thread__messages" id="conversationMessages">
     {% for message in messages %}
     {% if message.send_user == request.user %}
-    <div class="d-flex align-items-end gap-2 mb-3 justify-content-end">
-      <div class="conversation-bubble self">
-        <div class="conversation-bubble__meta">
-          <span class="fw-semibold">あなた</span>
-          <span>{{ message.send_time|date:"n/j H:i" }}</span>
+    <div class="message-row self">
+      <div class="d-flex flex-column align-items-end">
+        <span class="message-time">{{ message.send_time|date:"n/j H:i" }}</span>
+        <div class="message-flags">
+          {% if message.edit_flag %}<span class="badge text-bg-secondary">編集済み</span>{% endif %}
+          {% if message.read_flag %}<span class="badge text-bg-success">既読</span>{% endif %}
         </div>
-        <div class="conversation-bubble__body">{{ message.message_content|linebreaksbr }}</div>
-        <div class="conversation-bubble__flags">
-          {% if message.edit_flag %}<span class="badge rounded-pill text-bg-secondary">編集済み</span>{% endif %}
-          {% if message.read_flag %}<span class="badge rounded-pill text-bg-success">既読</span>{% else %}<span class="badge rounded-pill text-bg-warning">未読</span>{% endif %}
-        </div>
-        {% if not message.delete_flag %}
-        <div class="mt-2 d-flex gap-2 justify-content-end">
-          <a href="{% url 'comunicate:message_edit' message.pk %}" class="btn btn-sm btn-outline-light">編集</a>
-          <a href="{% url 'comunicate:message_delete' message.pk %}" class="btn btn-sm btn-outline-light text-danger">削除</a>
-        </div>
-        {% endif %}
       </div>
+      <div class="message-bubble self">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div class="message-author">あなた</div>
+          {% if not message.delete_flag %}
+          <div class="dropdown">
+            <button type="button" class="btn btn-sm btn-outline-light text-white border-0 p-1 d-flex align-items-center message-menu" data-bs-toggle="dropdown" aria-expanded="false" title="メッセージ操作">
+              <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{% url 'comunicate:message_edit' message.pk %}">メッセージを編集</a></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'comunicate:message_delete' message.pk %}">メッセージを削除</a></li>
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+        <div class="message-body">{{ message.message_content|linebreaksbr }}</div>
+      </div>
+      <a class="message-avatar self" href="{% url 'accounts:profile_detail' message.send_user.username %}" title="{{ message.send_user.username }} さんのプロフィール">
+        {% if message.sender_icon_url %}
+          <img src="{{ message.sender_icon_url }}" alt="{{ message.send_user.username }} さんのアイコン">
+        {% else %}
+          <span>{{ message.send_user.username|slice:":1"|upper }}</span>
+        {% endif %}
+      </a>
     </div>
     {% else %}
-    <div class="d-flex align-items-end gap-2 mb-3 justify-content-start">
-      <div class="conversation-bubble other">
-        <div class="conversation-bubble__meta">
-          <span class="fw-semibold">{{ message.send_user.username }}</span>
-          <span>{{ message.send_time|date:"n/j H:i" }}</span>
+    <div class="message-row other">
+      <a class="message-avatar other" href="{% url 'accounts:profile_detail' message.send_user.username %}" title="{{ message.send_user.username }} さんのプロフィール">
+        {% if message.sender_icon_url %}
+          <img src="{{ message.sender_icon_url }}" alt="{{ message.send_user.username }} さんのアイコン">
+        {% else %}
+          <span>{{ message.send_user.username|slice:":1"|upper }}</span>
+        {% endif %}
+      </a>
+      <div class="message-bubble other">
+        <div class="message-author">
+          {{ message.send_user.username }}
         </div>
-        <div class="conversation-bubble__body">{{ message.message_content|linebreaksbr }}</div>
-        <div class="conversation-bubble__flags">
+        <div class="message-body">{{ message.message_content|linebreaksbr }}</div>
+        <div class="message-flags">
           {% if message.edit_flag %}<span class="badge rounded-pill text-bg-secondary">編集済み</span>{% endif %}
         </div>
       </div>
+      <span class="message-time">{{ message.send_time|date:"n/j H:i" }}</span>
     </div>
     {% endif %}
     {% empty %}

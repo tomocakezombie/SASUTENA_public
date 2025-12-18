@@ -6,7 +6,7 @@ import secrets
 
 
 ROLE_CHOICES = [
-    ("proceduct", "生産者"),
+    ("producer", "生産者"),
     ("consumer", "消費者"),
 ]
 
