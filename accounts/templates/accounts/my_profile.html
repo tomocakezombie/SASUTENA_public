@@ -24,10 +24,12 @@
           <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:user_obj.username }} さん</h1>
           <p class="small text-muted mb-2">
             ロール:
-            {% if user_obj.role == "producer" or user_obj.role == "proceduct" %}
+            {% if user_obj.role == "producer" %}
               生産者
             {% elif user_obj.role == "consumer" %}
               消費者
+            {% elif user_obj.role == "admin" %}
+              管理者
             {% else %}
               未設定
             {% endif %}
@@ -104,7 +106,7 @@
                     <h2 class="h6 text-center mb-3">商品関連リンク</h2>
                     <div id="quickLinks" class="row g-3 justify-content-center">
                     <div class="col-12 col-md-6">
-                      {% if user_obj.role == "producer" or user_obj.role == "proceduct" %}
+                      {% if user_obj.role == "producer" or user_obj.role == "admin" %}
                       <a href="{% url 'product:producer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                       {% else %}
                       <a href="{% url 'product:consumer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">

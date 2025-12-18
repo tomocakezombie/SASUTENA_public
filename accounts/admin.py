@@ -11,5 +11,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     # ヘルパーメソッド：関連するUserモデルのロールを表示
     def role_display(self, obj):
+        if hasattr(obj.user, "get_role_display"):
+            return obj.user.get_role_display()
         return obj.user.role
     role_display.short_description = "ロール"
