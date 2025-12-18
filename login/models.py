@@ -8,18 +8,19 @@ import secrets
 ROLE_CHOICES = [
     ("producer", "生産者"),
     ("consumer", "消費者"),
+    ("admin", "管理者"),
 ]
 
 # カスタムユーザーモデル ロール追加
 class CustomUser(AbstractUser):
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="user")
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="consumer")
     redirect_authenticated_user = True
 
 # 新規アカウント作成時のリクエスト
 class AccountRequest(models.Model):
     username = models.CharField(max_length=150)
     email = models.EmailField()
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="user")
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="consumer")
     password = models.CharField(max_length=128)
     request_date = models.DateTimeField(auto_now_add=True)
     is_approved = models.BooleanField(default=False)

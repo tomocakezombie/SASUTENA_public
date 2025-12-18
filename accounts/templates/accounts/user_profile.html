@@ -24,10 +24,12 @@
                     <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:target_user.username }} さん</h1>
                     <p class="small text-muted mb-2">
                         ロール:
-                        {% if target_user.role == "producer" or target_user.role == "proceduct" %}
+                        {% if target_user.role == "producer" %}
                             生産者
                         {% elif target_user.role == "consumer" %}
                             消費者
+                        {% elif target_user.role == "admin" %}
+                            管理者
                         {% else %}
                             未設定
                         {% endif %}

@@ -23,8 +23,11 @@ def _allowed_counterparts_for(current_user):
         return qs
 
     role = getattr(current_user, "role", None)
+    if role == "admin":
+        return qs
+
     producer_roles = {"producer", "proceduct"}
-    base_filter = Q(is_staff=True) | Q(is_superuser=True)
+    base_filter = Q(is_staff=True) | Q(is_superuser=True) | Q(role="admin")
     if role in producer_roles:
         base_filter |= Q(role="consumer")
     elif role == "consumer":
@@ -109,7 +112,9 @@ def conversation_list(request):
 
     current_user_products = list(products_by_user.get(user.pk, []))
     include_own_products = bool(current_user_products) and (
-        getattr(user, "role", None) in {"producer", "proceduct"} or user.is_staff or user.is_superuser
+        getattr(user, "role", None) in {"producer", "proceduct", "admin"}
+        or user.is_staff
+        or user.is_superuser
     )
 
     for counterpart in all_users:

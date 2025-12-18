@@ -21,6 +21,12 @@ class SignupForm(forms.ModelForm):
         model = AccountRequest
         fields = ["username", "email", "role", "password"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        role_field = self.fields.get("role")
+        if role_field:
+            role_field.choices = [choice for choice in role_field.choices if choice[0] in {"producer", "consumer"}]
+
     def clean(self):
         cleaned = super().clean()
         if cleaned.get("password") != cleaned.get("confirm_password"):
