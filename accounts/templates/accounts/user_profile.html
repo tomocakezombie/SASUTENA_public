@@ -1,27 +1,95 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ target_user.username }} のプロフィール | Sasutena Project{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{% static 'css/accounts/mypage.css' %}">
+{% endblock %}
+
 {% block content %}
-    <div class="card">
-        <div class="card-header">
-            <h1 class="h4 mb-0">{{ target_user.username }} のプロフィール</h1>
-        </div>
-        <div class="card-body">
-            {% if profile %}
-                <dl class="row">
-                    <dt class="col-sm-3">名前</dt>
-                    <dd class="col-sm-9">{{ profile.name|default:"未設定" }}</dd>
+<main class="py-5">
+    <div class="container">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="mb-3">
+                        {% if profile and profile.icon_image %}
+                        <img src="{{ profile.icon_image.url }}" alt="{{ target_user.username }} さんのアイコン" class="rounded-circle border" style="width:96px; height:96px; object-fit:cover;">
+                        {% else %}
+                        <i class="bi bi-person-circle text-secondary" style="font-size:72px;"></i>
+                        {% endif %}
+                    </div>
+                    <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:target_user.username }} さん</h1>
+                    <p class="small text-muted mb-2">
+                        ロール:
+                        {% if target_user.role == "producer" or target_user.role == "proceduct" %}
+                            生産者
+                        {% elif target_user.role == "consumer" %}
+                            消費者
+                        {% else %}
+                            未設定
+                        {% endif %}
+                    </p>
+                    {% if rating_stars %}
+                    <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
+                        {% for star in rating_stars %}
+                            {% if star == "full" %}
+                            <i class="bi bi-star-fill text-warning"></i>
+                            {% elif star == "half" %}
+                            <i class="bi bi-star-half text-warning"></i>
+                            {% else %}
+                            <i class="bi bi-star text-warning"></i>
+                            {% endif %}
+                        {% endfor %}
+                        <span class="small text-muted ms-2">({{ rating_average|floatformat:1 }})</span>
+                        <span class="small text-muted">全{{ rating_count }}件</span>
+                    </div>
+                    {% else %}
+                    <p class="small text-muted mb-2">まだ評価はありません。</p>
+                    {% endif %}
+                    {% if request.user.is_authenticated and request.user.username != target_user.username %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'accounts:evaluate' target_user.username %}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                            <i class="bi bi-star"></i><span class="ms-1">評価する</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
 
-                    <dt class="col-sm-3">ニックネーム</dt>
-                    <dd class="col-sm-9">{{ profile.nick_name|default:"未設定" }}</dd>
+                <div class="mx-auto" style="max-width:720px;">
+                    <div class="card border-0 bg-body-tertiary mb-4">
+                        <div class="card-body">
+                            <h2 class="h6 text-muted mb-3">プロフィール情報</h2>
+                            {% if profile %}
+                            <dl class="row gy-2 mb-0">
+                                <dt class="col-sm-4">名前</dt>
+                                <dd class="col-sm-8">{{ profile.name|default:"未設定" }}</dd>
+                                <dt class="col-sm-4">ニックネーム</dt>
+                                <dd class="col-sm-8">{{ profile.nick_name|default:"未設定" }}</dd>
+                                <dt class="col-sm-4">公開設定</dt>
+                                <dd class="col-sm-8">{{ profile.publish_profile|yesno:"公開,非公開" }}</dd>
+                            </dl>
+                            {% else %}
+                            <p class="text-muted mb-0">プロフィール情報が見つかりません。</p>
+                            {% endif %}
+                        </div>
+                    </div>
 
-                    <dt class="col-sm-3">プロフィール</dt>
-                    <dd class="col-sm-9">{{ profile.content_profile|linebreaksbr|default:"未設定" }}</dd>
-                </dl>
-            {% else %}
-                <p class="text-muted mb-0">プロフィール情報が見つかりません。</p>
-            {% endif %}
+                    <div class="card border-0 bg-body-tertiary">
+                        <div class="card-body">
+                            <h2 class="h6 text-muted mb-3">自己紹介</h2>
+                            {% if profile and profile.content_profile %}
+                            <p class="mb-0">{{ profile.content_profile|linebreaksbr }}</p>
+                            {% else %}
+                            <p class="mb-0 text-muted">自己紹介はまだ設定されていません。</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</main>
 {% endblock %}

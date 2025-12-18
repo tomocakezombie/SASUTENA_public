@@ -4,82 +4,111 @@
 {% block title %}マイプロフィール | Sasutena Project{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/accounts/mypage' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{% static 'css/accounts/mypage.css' %}">
 {% endblock %}
 
 {% block content %}
-    <!-- <div class="card">
-        <div class="card-header">
-            <h1 class="h4 mb-0">マイプロフィール</h1>
+<main class="py-5">
+  <div class="container">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="text-center mb-4">
+          <div class="mb-3">
+            {% if profile and profile.icon_image %}
+            <img src="{{ profile.icon_image.url }}" alt="{{ user_obj.username }} さんのアイコン" class="rounded-circle border" style="width:96px; height:96px; object-fit:cover;">
+            {% else %}
+            <i class="bi bi-person-circle text-secondary" style="font-size:72px;"></i>
+            {% endif %}
+          </div>
+          <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:user_obj.username }} さん</h1>
+          <p class="small text-muted mb-2">
+            ロール:
+            {% if user_obj.role == "producer" or user_obj.role == "proceduct" %}
+              生産者
+            {% elif user_obj.role == "consumer" %}
+              消費者
+            {% else %}
+              未設定
+            {% endif %}
+          </p>
+          {% if rating_stars %}
+          <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
+            {% for star in rating_stars %}
+              {% if star == "full" %}
+              <i class="bi bi-star-fill text-warning"></i>
+              {% elif star == "half" %}
+              <i class="bi bi-star-half text-warning"></i>
+              {% else %}
+              <i class="bi bi-star text-warning"></i>
+              {% endif %}
+            {% endfor %}
+            <span class="small text-muted ms-2">({{ rating_average|floatformat:1 }})</span>
+            <span class="small text-muted">全{{ rating_count }}件</span>
+          </div>
+          {% else %}
+          <p class="small text-muted mb-2">まだ評価はありません。</p>
+          {% endif %}
+          <div class="d-flex justify-content-center gap-2">
+            <button type="button" id="profileEditBtn" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+              <i class="bi bi-pencil-square"></i><span class="ms-1">プロフィールを編集</span>
+            </button>
+          </div>
         </div>
-        <div class="card-body">
-            <dl class="row">
-                <dt class="col-sm-3">ユーザー名</dt>
-                <dd class="col-sm-9">{{ user_obj.username }}</dd>
+        <!-- @削除予定 -->
+        <div class="mx-auto" style="max-width:720px;">
+          <div class="card border-0 bg-body-tertiary mb-4">
+            <div class="card-body">
+              <h2 class="h6 text-muted mb-3">「デバッグ情報」</h2>
+              <dl class="row gy-2 mb-0">
+                <dt class="col-sm-4">ユーザー名</dt>
+                <dd class="col-sm-8">{{ user_obj.username }}</dd>
+                <dt class="col-sm-4">メール</dt>
+                <dd class="col-sm-8">{{ user_obj.email|default:"未登録" }}</dd>
+                <dt class="col-sm-4">名前</dt>
+                <dd class="col-sm-8">{{ profile.name|default:"未設定" }}</dd>
+                <dt class="col-sm-4">ニックネーム</dt>
+                <dd class="col-sm-8">{{ profile.nick_name|default:"未設定" }}</dd>
+                <dt class="col-sm-4">公開設定</dt>
+                <dd class="col-sm-8">{{ profile.publish_profile|yesno:"公開,非公開" }}</dd>
+              </dl>
+            </div>
+          </div>
 
-                <dt class="col-sm-3">メール</dt>
-                <dd class="col-sm-9">{{ user_obj.email|default:"未登録" }}</dd>
 
-                {% if profile %}
-                    <dt class="col-sm-3">名前</dt>
-                    <dd class="col-sm-9">{{ profile.name|default:"未設定" }}</dd>
-
-                    <dt class="col-sm-3">ニックネーム</dt>
-                    <dd class="col-sm-9">{{ profile.nick_name|default:"未設定" }}</dd>
-
-                    <dt class="col-sm-3">プロフィール</dt>
-                    <dd class="col-sm-9">{{ profile.content_profile|linebreaksbr|default:"未設定" }}</dd>
-
-                    <dt class="col-sm-3">公開設定</dt>
-                    <dd class="col-sm-9">{{ profile.publish_profile|yesno:"公開,非公開" }}</dd>
+          <div class="card border-0 bg-body-tertiary">
+            <div class="card-body">
+              <h2 class="h6 text-muted mb-3">自己紹介</h2>
+              <div id="profileBioDisplay" class="mb-3" data-has-bio="{% if profile and profile.content_profile %}1{% else %}0{% endif %}">
+                {% if profile and profile.content_profile %}
+                <p id="profileBioText" class="mb-0">{{ profile.content_profile|linebreaksbr }}</p>
                 {% else %}
-                    <dt class="col-sm-3">プロフィール</dt>
-                    <dd class="col-sm-9 text-muted">プロフィールが未設定です。</dd>
+                <p id="profileBioText" class="mb-0 text-muted">自己紹介はまだ設定されていません。</p>
                 {% endif %}
-            </dl>
-        </div>
-    </div> -->
-
-          <main class="py-5">
-            <div class="container">
-              <div class="card shadow-sm border-0">
-                <div class="card-body">
-                  <div class="text-center mb-4">
-                    <div class="mb-3">
-                      <i class="bi bi-person-circle text-secondary" id="profileIcon" style="font-size:72px;"></i>
-                    </div>
-                    <h1 class="h4 mb-1" id="profileName">consumer1 さん</h1>
-                    <p class="small text-muted mb-2" id="profileRole">ロール: consumer</p>
-                    <div id="profileControls" class="d-flex justify-content-center gap-2"><button type="button" class="btn btn-sm btn-outline-primary">プロフィールを編集</button></div>
-                  </div>
-
-                  <div class="mx-auto" style="max-width:720px;">
-                    <div id="profileBioDisplay" class="small text-muted mb-3 text-center">自己紹介はまだ設定されていません。</div>
-                    <div id="profileBioEditor" class="d-none mb-3">
-                      <label for="bioText" class="form-label small">自己紹介（プロフィール）</label>
-                      <textarea id="bioText" class="form-control mb-2" rows="4" placeholder="自己紹介を入力してください" maxlength="100"></textarea>
-                      <div class="form-text">100文字以内で入力してください。</div>
-                      <div class="d-flex justify-content-center gap-2">
-                        <button id="saveBio" class="btn btn-primary btn-sm">保存</button>
-                        <button id="cancelBio" class="btn btn-outline-secondary btn-sm">キャンセル</button>
-                      </div>
-                    </div>
-                    <div id="ratingSection" class="mt-3">
-                  <div class="small mb-2 text-center">
-                    <strong>評価:</strong>
-                    <span class="ms-2" id="ratingStars"><i class="bi bi-star text-warning"></i><i class="bi bi-star text-warning"></i><i class="bi bi-star text-warning"></i><i class="bi bi-star text-warning"></i><i class="bi bi-star text-warning"></i></span>
-                    <span class="ms-2" id="ratingSummary">(0)</span>
-                  </div>
+              </div>
+              <div id="profileBioEditor" class="mb-3 d-none">
+                <label for="bioText" class="form-label small">自己紹介（プロフィール）</label>
+                <textarea id="bioText" class="form-control mb-2" rows="4" placeholder="自己紹介を入力してください" maxlength="100">{% if profile and profile.content_profile %}{{ profile.content_profile }}{% endif %}</textarea>
+                <div class="form-text">100文字以内で入力してください。</div>
+                <div class="d-flex justify-content-center gap-2">
+                  <button id="saveBio" type="button" class="btn btn-primary btn-sm">保存</button>
+                  <button id="cancelBio" type="button" class="btn btn-outline-secondary btn-sm">キャンセル</button>
                 </div>
-                  </div>
-
-                  <hr class="my-4">
+              </div>
+              <div id="profileBioMessage" class="alert alert-success d-none small mb-0" role="alert"></div>
+            </div>
+          </div>
+              <hr class="my-4">
 
                   <section class="mx-auto" style="max-width:720px;">
                     <h2 class="h6 text-center mb-3">商品関連リンク</h2>
                     <div id="quickLinks" class="row g-3 justify-content-center">
                     <div class="col-12 col-md-6">
-                      <a href="consumer_apply.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% if user_obj.role == "producer" or user_obj.role == "proceduct" %}
+                      <a href="{% url 'product:producer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% else %}
+                      <a href="{% url 'product:consumer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% endif %}
                         <div class="card-body d-flex align-items-start gap-3">
                           <span class="link-icon link-icon-primary"><i class="bi bi-grid"></i></span>
                           <div>
@@ -91,7 +120,7 @@
                     </div>
                   
                     <div class="col-12 col-md-6">
-                      <a href="conversations.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      <a href="{% url 'comunicate:conversation_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                         <div class="card-body d-flex align-items-start gap-3">
                           <span class="link-icon link-icon-success"><i class="bi bi-chat-dots"></i></span>
                           <div>
@@ -115,7 +144,7 @@
                     </div>
                   
                     <div class="col-12 col-md-6">
-                      <a href="settings.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      <a href="{% url 'accounts:settings' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                         <div class="card-body d-flex align-items-start gap-3">
                           <span class="link-icon link-icon-secondary"><i class="bi bi-gear"></i></span>
                           <div>
@@ -126,31 +155,17 @@
                       </a>
                     </div>
                   </div>
-                  </section>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
 
-                  <!-- <section class="mx-auto mt-4" style="max-width:720px;">
-                    <h2 class="h6 text-center mb-3">ステータス</h2>
-                    <ul class="list-group" id="statsList">
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>申込み済み出品</span>
-                    <span class="fw-semibold">0 件</span>
-                  </li>
-                
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>承認済み申込み</span>
-                    <span class="fw-semibold">0 件</span>
-                  </li>
-                
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>承認待ち申込み</span>
-                    <span class="fw-semibold">0 件</span>
-                  </li>
-                </ul>
-                  </section> -->
-                </div>
-              </div>
-            </div>
-          </main>
-
+{% block extra_js %}
+{{ block.super }}
+{{ profile.content_profile|default_if_none:''|json_script:"initial-profile-bio" }}
+<script src="{% static 'js/accounts/my_profile.js' %}"></script>
 {% endblock %}
 

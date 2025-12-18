@@ -1,0 +1,35 @@
+.site-header {
+  background-color: #ffffff;
+}
+
+.site-header .navbar {
+  padding: 0.75rem 0;
+}
+
+.site-header .navbar-brand {
+  column-gap: 0.75rem;
+}
+
+.site-header__logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.site-header__actions {
+  column-gap: 0.75rem;
+}
+
+.site-header .dropdown-menu {
+  min-width: 14rem;
+}
+
+@media (max-width: 575.98px) {
+  .site-header .navbar-brand span {
+    font-size: 1.1rem;
+  }
+
+  .site-header__actions {
+    column-gap: 0.5rem;
+  }
+}
