@@ -1,2 +1,64 @@
-<h1>正常にログアウトに成功しました！</h1>
-<a href="{% url 'login:index' %}">トップ画面へ戻る</a>
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<body class="bg-light bootstrap-enabled">
+
+<main class="py-5">
+    <div class="container">
+
+        <div class="row justify-content-center mb-4">
+            <div class="col-12 col-lg-8 text-center">
+                <h2 class="fw-semibold">ログアウト完了</h2>
+                <p class="text-muted">ご利用ありがとうございました</p>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+
+                <!-- ===== ログアウト完了カード ===== -->
+                <div class="card shadow-sm border-0 text-center">
+                    <div class="card-body py-4">
+
+                        <div class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                        </div>
+
+                        <h3 class="h5 fw-semibold mb-2">
+                            正常にログアウトしました
+                        </h3>
+
+                        <p class="text-muted mb-4">
+                            再度ログインする場合は、トップ画面から操作してください。
+                        </p>
+
+                        <a href="{% url 'login:index' %}" class="btn btn-primary">
+                            トップ画面へ戻る
+                        </a>
+
+                    </div>
+                </div>
+                <!-- ===== ここまで ===== -->
+
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
+
+{% endblock %}
+
+
+
+
+
+
+{% comment %} <h1>正常にログアウトに成功しました！</h1>
+<a href="{% url 'login:index' %}">トップ画面へ戻る</a> {% endcomment %}

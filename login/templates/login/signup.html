@@ -68,8 +68,8 @@
                         </div>
 
                         <button type="submit" class="btn btn-success w-100">申請を送る</button>
-                        
 
+                    
                     </form>
 
                 </div>
@@ -83,8 +83,83 @@
         </div>
     </div>
 </main>
+<!-- ローディングアニメーション（signup限定） -->
+<div id="load">
+  {% comment %} <div class="letters"> {% endcomment %}
+  <div>G</div>
+  <div>N</div>
+  <div>I</div>
+  <div>D</div>
+  <div>A</div>
+  <div>O</div>
+  <div>L</div>
+  {% comment %} </div> {% endcomment %}
+</div>
+
+<style>
+/* 画面を覆う */
+/* body背景は消す */
+#load {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  z-index: 9999;
+
+  width:600px;
+  height:60px;
+  left:50%;
+  top:40%;
+  margin-left:-300px;
+  overflow:visible;
+  user-select:none;
+}
+
+#load div {
+  position:absolute;
+  width:20px;
+  height:36px;
+  opacity:0;
+  font-family:Helvetica, Arial, sans-serif;
+
+  font-size: 40px;        /* ← ここを追加（例） */
+  font-weight: bold;     /* 任意だけどおすすめ */
+
+  animation:move 2s linear infinite;
+  transform:rotate(180deg);
+  color:#35C4F0;
+}
+
+/* delay */
+#load div:nth-child(2){ animation-delay:0.2s; }
+#load div:nth-child(3){ animation-delay:0.4s; }
+#load div:nth-child(4){ animation-delay:0.6s; }
+#load div:nth-child(5){ animation-delay:0.8s; }
+#load div:nth-child(6){ animation-delay:1s; }
+#load div:nth-child(7){ animation-delay:1.2s; }
+
+@keyframes move {
+  0% { left:0; opacity:0; }
+  35% { left:41%; transform:rotate(0deg); opacity:1; }
+  65% { left:59%; transform:rotate(0deg); opacity:1; }
+  100% { left:100%; transform:rotate(-180deg); opacity:0; }
+}
+
+</style>
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const form = document.getElementById("registerForm");
 
+  if (form) {
+    form.addEventListener("submit", () => {
+      const load = document.getElementById("load");
+      if (load) {
+        load.style.display = "block";
+      }
+    });
+  }
+</script>
 </body>
 </html>
