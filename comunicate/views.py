@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from urllib.parse import urlencode
 
 from django import forms as django_forms
 from django.contrib import messages as django_messages
@@ -330,12 +331,11 @@ def conversation_detail(request, username, item_id=None):
 
 def _conversation_redirect(message, current_user):
     counterpart = message.receive_user if message.send_user == current_user else message.send_user
+    params = {"user": counterpart.username}
     if message.item_id:
-        return reverse(
-            "comunicate:conversation_detail_item",
-            kwargs={"username": counterpart.username, "item_id": message.item_id},
-        )
-    return reverse("comunicate:conversation_detail", kwargs={"username": counterpart.username})
+        params["item"] = message.item_id
+    base_url = reverse("comunicate:conversation_list")
+    return f"{base_url}?{urlencode(params)}"
 
 
 @login_required
