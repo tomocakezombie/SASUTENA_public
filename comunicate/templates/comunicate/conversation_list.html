@@ -135,7 +135,7 @@
           </section>
           <section class="flex-grow-1">
             <div class="bg-white rounded-3 h-100 p-3" id="conversationContent">
-              <p class="text-muted small mb-0">ユーザーとトークを選択するとここに表示されます。</p>
+              <p class="text-muted small mb-0">会話相手を選択するとここに表示されます。</p>
             </div>
           </section>
         </div>
@@ -693,11 +693,10 @@
   attachThreadButtons();
 
   const initialUsername = card.dataset.initialUsername;
-  const initialUrl = card.dataset.initialUrl;
   if (initialUsername) {
     const initialButton = userList ? userList.querySelector('.conversation-user[data-username="' + initialUsername + '"]') : null;
     if (initialButton) {
-      selectUser(initialButton, {autoThreadUrl: initialUrl || initialButton.dataset.initialThreadUrl || ''});
+      setActiveUser(initialButton);
     }
   }
 })();
