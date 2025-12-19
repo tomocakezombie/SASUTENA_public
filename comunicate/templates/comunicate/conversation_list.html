@@ -287,9 +287,26 @@
       }
       button.addEventListener('click', () => {
         const threadUrl = button.dataset.threadUrl || '';
-        if (threadUrl) {
-          loadConversation(threadUrl, button);
+        if (!threadUrl)return; //{
+
+          // ★ 今選択中のユーザー名を取得
+        const username = document
+          .querySelector('.conversation-user.active')
+          ?.dataset.username;
+
+        // ★ ① スレッドの未読数を消す
+        const clearedCount = clearThreadUnread(button);
+
+        // ★ ② 左側ユーザーの未読数を減らす
+        if (username) {
+          decreaseUserUnread(username, clearedCount);
         }
+
+        // ③ ★ ヘッダー未読を減らす（ここが今まで動いてなかった）
+        decreaseHeaderUnread(clearedCount);
+
+        loadConversation(threadUrl, button);
+        //}
       });
       button.dataset.bound = 'true';
     });
@@ -696,6 +713,57 @@
       }
     }
   }
+
+
+  function clearThreadUnread(threadButton) {
+    if (!threadButton) return 0;
+
+    const badge = threadButton.querySelector('.badge');
+    if (!badge) return 0;
+
+    const count = parseInt(badge.textContent, 10) || 0;
+    badge.remove(); // ← スレッド側の通知を消す
+    return count;
+  }
+
+  function decreaseUserUnread(username, diff) {
+    if (!diff || diff <= 0) return;
+
+    const userButton = document.querySelector(
+      `.conversation-user[data-username="${username}"]`
+    );
+    if (!userButton) return;
+
+    const badge = userButton.querySelector('.badge');
+    if (!badge) return;
+
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - diff;
+
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.remove(); // 0以下なら消す
+    }
+  }
+
+
+  function decreaseHeaderUnread(diff) {
+    if (!diff || diff <= 0) return;
+
+    const badge = document.getElementById('header-dm-badge');
+    if (!badge) return;
+
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - diff;
+
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.remove(); // 0以下なら消す
+    }
+  }
+
 
   if (userList) {
     userList.querySelectorAll('.conversation-user').forEach(button => {
