@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
@@ -120,3 +121,39 @@ def product_detail(request, pk):
         'comments': comments,
         'comment_form': comment_form,
     })
+
+
+@login_required
+@require_POST
+def product_comment_update(request, comment_id):
+    comment = get_object_or_404(ProductComment, pk=comment_id, delete_flag=False)
+
+    if comment.user != request.user:
+        messages.warning(request, '自分のコメントのみ編集できます。')
+        return redirect('product:product_detail', pk=comment.product.pk)
+
+    form = ProductCommentForm(request.POST, instance=comment)
+    if form.is_valid():
+        comment.content = form.cleaned_data['content']
+        comment.edit_flag = True
+        comment.save(update_fields=['content', 'edit_flag'])
+        messages.success(request, 'コメントを更新しました。')
+    else:
+        messages.error(request, 'コメントの更新に失敗しました。内容を確認してください。')
+
+    return redirect('product:product_detail', pk=comment.product.pk)
+
+
+@login_required
+@require_POST
+def product_comment_delete(request, comment_id):
+    comment = get_object_or_404(ProductComment, pk=comment_id, delete_flag=False)
+
+    if comment.user != request.user:
+        messages.warning(request, '自分のコメントのみ削除できます。')
+        return redirect('product:product_detail', pk=comment.product.pk)
+
+    comment.delete_flag = True
+    comment.save(update_fields=['delete_flag'])
+    messages.success(request, 'コメントを削除しました。')
+    return redirect('product:product_detail', pk=comment.product.pk)
