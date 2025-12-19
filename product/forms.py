@@ -4,7 +4,7 @@ from django import forms
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Product, ProductApplication
+from .models import Product, ProductApplication, ProductComment
 
 
 class ProductForm(forms.ModelForm):
@@ -14,7 +14,8 @@ class ProductForm(forms.ModelForm):
     )
     start_clock = forms.TimeField(
         label="受け渡し開始時間",
-        widget=forms.TimeInput(attrs={"type": "time"}),
+        widget=forms.TimeInput(attrs={"type": "time", "step": "60"}, format="%H:%M"),
+        input_formats=["%H:%M"],
         required=False,
     )
     end_date = forms.DateField(
@@ -23,7 +24,8 @@ class ProductForm(forms.ModelForm):
     )
     end_clock = forms.TimeField(
         label="受け渡し終了時間",
-        widget=forms.TimeInput(attrs={"type": "time"}),
+        widget=forms.TimeInput(attrs={"type": "time", "step": "60"}, format="%H:%M"),
+        input_formats=["%H:%M"],
         required=False,
     )
 
@@ -33,16 +35,38 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        text_inputs = [
+            ("item_name", {"placeholder": "例：朝採れトマト10個入り"}),
+            ("description", {"placeholder": "商品の状態や受渡条件、受け渡し場所などを記入", "rows": 4}),
+        ]
+        for field_name, extra_attrs in text_inputs:
+            base_attrs = {"class": "form-control"}
+            base_attrs.update(extra_attrs)
+            self.fields[field_name].widget.attrs.update(base_attrs)
+
+        number_attrs = {"class": "form-control", "min": 1}
+        self.fields["number"].widget.attrs.update(number_attrs)
+
+        date_attrs = {"class": "form-control", "placeholder": "yyyy/mm/dd"}
+        self.fields["start_date"].widget.attrs.update(date_attrs)
+        self.fields["end_date"].widget.attrs.update(date_attrs.copy())
+
+        time_attrs = {"class": "form-control", "step": "60"}
+        self.fields["start_clock"].widget.attrs.update(time_attrs)
+        self.fields["end_clock"].widget.attrs.update(time_attrs.copy())
+
+        self.fields["item_image"].widget.attrs.update({"class": "form-control"})
+
         start_dt = getattr(self.instance, "start_time", None)
         if start_dt:
             localized = timezone.localtime(start_dt) if timezone.is_aware(start_dt) else start_dt
             self.fields["start_date"].initial = localized.date()
-            self.fields["start_clock"].initial = localized.time().replace(microsecond=0)
+            self.fields["start_clock"].initial = localized.time().replace(second=0, microsecond=0)
         end_dt = getattr(self.instance, "end_time", None)
         if end_dt:
             localized = timezone.localtime(end_dt) if timezone.is_aware(end_dt) else end_dt
             self.fields["end_date"].initial = localized.date()
-            self.fields["end_clock"].initial = localized.time().replace(microsecond=0)
+            self.fields["end_clock"].initial = localized.time().replace(second=0, microsecond=0)
         if self.fields["start_clock"].initial is None:
             self.fields["start_clock"].initial = time(hour=0, minute=0)
         if self.fields["end_clock"].initial is None:
@@ -62,6 +86,11 @@ class ProductForm(forms.ModelForm):
             if settings.USE_TZ and timezone.is_naive(combined):
                 return timezone.make_aware(combined, timezone.get_current_timezone())
             return combined
+
+        if start_clock:
+            start_clock = start_clock.replace(second=0, microsecond=0)
+        if end_clock:
+            end_clock = end_clock.replace(second=0, microsecond=0)
 
         start_time_only = start_clock or time(hour=0, minute=0)
         end_time_only = end_clock or time(hour=23, minute=59)
@@ -103,4 +132,23 @@ class ProductApplicationForm(forms.ModelForm):
     class Meta:
         model = ProductApplication
         fields = ["message"]
+
+
+class ProductCommentForm(forms.ModelForm):
+    content = forms.CharField(
+        label="コメントを投稿",
+        max_length=511,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "コメントを入力してください",
+                "maxlength": 511,
+            }
+        ),
+    )
+
+    class Meta:
+        model = ProductComment
+        fields = ["content"]
 

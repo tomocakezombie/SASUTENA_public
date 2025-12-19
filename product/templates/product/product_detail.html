@@ -57,7 +57,7 @@
 						<dt class="col-sm-3 col-lg-2 text-muted small mb-0">受け渡し</dt>
 						<dd class="col-sm-9 col-lg-10 fw-semibold mb-0">
 							{% if product.start_time and product.end_time %}
-								{{ product.start_time|date:'Y/m/d' }}〜{{ product.end_time|date:'Y/m/d' }}
+								{{ product.start_time|date:'Y/m/d H:i' }}〜{{ product.end_time|date:'Y/m/d H:i' }}
 							{% elif product.start_time %}
 								{{ product.start_time|date:'Y/m/d H:i' }}
 							{% elif product.end_time %}
@@ -116,15 +116,93 @@
 	<div class="card border-0 shadow-sm">
 		<div class="card-body p-4">
 			<h3 class="h6 mb-3">コメント</h3>
-			<p class="text-muted small mb-4">コメントはまだありません。最初のコメントを投稿してみましょう。</p>
-			<form class="vstack gap-3" onsubmit="return false;">
+			{% if comments %}
+				<ul class="list-unstyled mb-4">
+					{% for comment in comments %}
+						<li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
+							<div class="d-flex align-items-start gap-3">
+								<span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+									<span class="fw-semibold">{{ comment.user.username|first|default:"?" }}</span>
+								</span>
+								<div class="flex-grow-1">
+									<div class="d-flex justify-content-between align-items-start gap-2">
+										<div class="d-flex flex-wrap align-items-center gap-2">
+											<span class="fw-semibold">
+												{% if comment.user == user %}
+													あなた
+												{% else %}
+													{{ comment.user.username }}
+												{% endif %}
+											</span>
+											<span class="text-muted small">{{ comment.comment_time|date:'Y/m/d H:i' }}</span>
+											{% if comment.edit_flag %}
+												<span class="text-muted small">編集済み</span>
+											{% endif %}
+										</div>
+										{% if comment.user == user %}
+											<div class="dropdown">
+												<button class="btn btn-sm text-muted p-0 bg-transparent border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+													<span class="fs-5 lh-1">⋮</span>
+													<span class="visually-hidden">コメント操作</span>
+												</button>
+												<ul class="dropdown-menu dropdown-menu-end">
+													<li>
+														<button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.item_comment_id }}">コメントを編集</button>
+													</li>
+													<li>
+														<form method="post" action="{% url 'product:comment_delete' comment.item_comment_id %}" class="comment-delete-form">
+															{% csrf_token %}
+															<button type="submit" class="dropdown-item text-danger">コメントを削除</button>
+														</form>
+													</li>
+												</ul>
+											</div>
+										{% endif %}
+									</div>
+									<p class="text-muted small mb-0">{{ comment.content|linebreaksbr }}</p>
+								</div>
+							</div>
+							{% if comment.user == user %}
+								<div class="modal fade" id="editCommentModal-{{ comment.item_comment_id }}" tabindex="-1" aria-labelledby="editCommentModalLabel-{{ comment.item_comment_id }}" aria-hidden="true">
+									<div class="modal-dialog modal-dialog-centered" role="document">
+										<div class="modal-content border-0 shadow">
+											<form method="post" action="{% url 'product:comment_update' comment.item_comment_id %}">
+												{% csrf_token %}
+												<div class="modal-body pb-2">
+													<p class="fw-semibold mb-3" id="editCommentModalLabel-{{ comment.item_comment_id }}">コメントを編集</p>
+													<input id="editCommentContent-{{ comment.item_comment_id }}" type="text" name="content" class="form-control" maxlength="511" required value="{{ comment.content }}">
+												</div>
+												<div class="modal-footer border-0 pt-0">
+													<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+													<button type="submit" class="btn btn-primary">OK</button>
+												</div>
+											</form>
+										</div>
+									</div>
+								</div>
+							{% endif %}
+						</li>
+					{% endfor %}
+				</ul>
+			{% else %}
+				<p class="text-muted small mb-4">コメントはまだありません。最初のコメントを投稿してみましょう。</p>
+			{% endif %}
+			<form method="post" class="vstack gap-3">
+				{% csrf_token %}
+				<input type="hidden" name="form_type" value="comment">
+				{% if comment_form.non_field_errors %}
+					<div class="alert alert-danger" role="alert">{{ comment_form.non_field_errors|join:' ' }}</div>
+				{% endif %}
 				<div>
-					<label for="comment" class="form-label">コメントを投稿</label>
-					<textarea id="comment" class="form-control" rows="4" placeholder="コメントを入力してください"></textarea>
+					{{ comment_form.content.label_tag }}
+					{{ comment_form.content }}
+					{% if comment_form.content.errors %}
+						<div class="text-danger small mt-1">{{ comment_form.content.errors|join:' ' }}</div>
+					{% endif %}
 				</div>
 				<div class="d-flex justify-content-end gap-2">
 					<button type="reset" class="btn btn-outline-secondary">クリア</button>
-					<button type="submit" class="btn btn-primary" disabled>投稿</button>
+					<button type="submit" class="btn btn-primary">投稿</button>
 				</div>
 			</form>
 		</div>
@@ -142,6 +220,7 @@
 				<form method="post" class="needs-validation" novalidate>
 					<div class="modal-body">
 						{% csrf_token %}
+						<input type="hidden" name="form_type" value="application">
 						{% if application_form.non_field_errors %}
 							<div class="alert alert-danger" role="alert">{{ application_form.non_field_errors }}</div>
 						{% endif %}
@@ -182,4 +261,28 @@
 			});
 		</script>
 	{% endif %}
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			var editModals = document.querySelectorAll('[id^="editCommentModal-"]');
+			editModals.forEach(function (modalElement) {
+				modalElement.addEventListener('shown.bs.modal', function () {
+					var input = modalElement.querySelector('textarea, input[type="text"]');
+					if (input) {
+						input.focus();
+						if (typeof input.select === 'function') {
+							input.select();
+						}
+					}
+				});
+			});
+			var deleteForms = document.querySelectorAll('.comment-delete-form');
+			deleteForms.forEach(function (form) {
+				form.addEventListener('submit', function (event) {
+					if (!confirm('このコメントを削除しますか？')) {
+						event.preventDefault();
+					}
+				});
+			});
+		});
+	</script>
 {% endblock %}
