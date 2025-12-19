@@ -3,13 +3,16 @@
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
-from .forms import SignupForm, VerificationForm
 from django.conf import settings
 from django.core.mail import send_mail
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
+
+from .forms import SignupForm, VerificationForm
 from .models import CustomUser, AccountRequest
 from accounts.models import UserProfile
 
@@ -19,6 +22,26 @@ from accounts.models import UserProfile
 
 def helloworld(request):
     return HttpResponse("Hello Django!")
+
+
+class RoleBasedLoginView(LoginView):
+    template_name = "login/login.html"
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        redirect_url = self.get_redirect_url()
+        if redirect_url:
+            return redirect_url
+
+        user = self.request.user
+        role = getattr(user, "role", "")
+
+        if role == "producer":
+            return reverse_lazy("product:product_create")
+        if role == "consumer":
+            return reverse_lazy("login:consumer_portal")
+
+        return reverse_lazy("login:index")
 
 class SignupView(FormView):
     template_name = "login/signup.html"
@@ -102,3 +125,16 @@ class VerifySignupView(FormView):
         messages.success(self.request, "アカウント登録申請が完了しました。ログインしてください。")
         success_url = reverse_lazy("login:index")  
         return super().form_valid(form)
+
+
+@login_required
+def consumer_portal(request):
+    role = getattr(request.user, "role", "")
+    if role != "consumer":
+        if role == "producer":
+            return redirect("product:product_create")
+        return redirect("login:home")
+
+    return render(request, "login/consumer_portal.html", {
+        "user_profile": getattr(request.user, "userprofile", None),
+    })
