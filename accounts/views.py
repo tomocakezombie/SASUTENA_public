@@ -9,6 +9,7 @@ from django.db.models import Avg, Count
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .forms import UserEvaluationForm, userSettings
 from .models import UserEvaluation, UserProfile
@@ -194,6 +195,14 @@ def evaluate(request, username):
 	if target_user == request.user:
 		return HttpResponseForbidden("自分を評価することはできません。")
 
+	requested_next = request.POST.get("next") or request.GET.get("next")
+	if requested_next and not url_has_allowed_host_and_scheme(
+			requested_next,
+			allowed_hosts={request.get_host()},
+			require_https=request.is_secure(),
+	):
+		requested_next = None
+
 	evaluation = UserEvaluation.objects.filter(
 		target_user_id=target_user,
 		from_user_id=request.user,
@@ -207,6 +216,8 @@ def evaluate(request, username):
 			evaluation.from_user_id = request.user
 			evaluation.save()
 			messages.success(request, f"{target_user.username} さんへの評価を保存しました。")
+			if requested_next:
+				return redirect(requested_next)
 			return redirect("accounts:profile_detail", username=target_user.username)
 	else:
 		form = UserEvaluationForm(instance=evaluation)
@@ -219,6 +230,35 @@ def evaluate(request, username):
 			"form": form,
 			"current_score": evaluation.score if evaluation else None,
 			"current_comment": evaluation.comment if evaluation else None,
+			"next_url": requested_next,
+		},
+	)
+
+
+@login_required
+def producer_evaluation_overview(request):
+	"""Show producer list with entry points for submitting evaluations."""
+	if getattr(request.user, "role", "") != "consumer":
+		return HttpResponseForbidden("このページには消費者のみアクセスできます。")
+
+	producer_list = (
+		User.objects.filter(role="producer")
+		.annotate(average_score=Avg("evaluations__score"), rating_count=Count("evaluations__id"))
+		.order_by("username")
+	)
+
+	evaluation_history = (
+		UserEvaluation.objects.filter(from_user_id=request.user)
+		.select_related("target_user_id")
+		.order_by("-id")
+	)
+
+	return render(
+		request,
+		"accounts/producer_evaluation_overview.html",
+		{
+			"producer_list": producer_list,
+			"evaluation_history": evaluation_history,
 		},
 	)
 

@@ -5,6 +5,7 @@ from . import views
 app_name = "accounts"
 
 urlpatterns = [
+    path("evaluate/", views.producer_evaluation_overview, name="producer_evaluation_overview"),
     path("my_page/", views.my_page, name="my_page"),
     path("my_page/bio/", views.update_profile_bio, name="update_profile_bio"),
     path("users/<str:username>/", views.profile_detail, name="profile_detail"),

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}生産者を評価する | Sasutena Project{% endblock %}
+
+{% block content %}
+<section class="py-5">
+	<div class="container" style="max-width: 900px;">
+		<div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+			<div>
+				<h1 class="h4 mb-1">生産者を評価する</h1>
+				<p class="text-muted small mb-0">評価したい生産者を選び、評価を登録してください。</p>
+			</div>
+			<div class="d-flex gap-2">
+				<a href="{% url 'login:consumer_portal' %}" class="btn btn-outline-secondary btn-sm">戻る</a>
+				<a href="{% url 'accounts:my_page' %}" class="btn btn-outline-primary btn-sm">マイページを見る</a>
+			</div>
+		</div>
+
+		<div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-0">
+				<h2 class="h6 mb-0">生産者一覧</h2>
+			</div>
+			<div class="table-responsive">
+				<table class="table align-middle mb-0">
+					<thead class="table-light">
+						<tr>
+							<th scope="col" class="text-nowrap">生産者</th>
+							<th scope="col" class="text-nowrap">平均評価</th>
+							<th scope="col" class="text-nowrap">評価件数</th>
+                            <th scope="col" class="text-nowrap">        </th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if producer_list %}
+							{% for producer in producer_list %}
+							<tr>
+								<td class="fw-semibold">{{ producer.username }}</td>
+								<td class="text-muted">
+									{% if producer.average_score %}
+										{{ producer.average_score|floatformat:1 }} / 5.0
+									{% else %}
+										未評価
+									{% endif %}
+								</td>
+								<td class="text-muted">{{ producer.rating_count }}</td>
+								<td class="text-end">
+									<a href="{% url 'accounts:evaluate' producer.username %}?next={% url 'accounts:producer_evaluation_overview' %}" class="btn btn-primary btn-sm">評価する</a>
+								</td>
+							</tr>
+							{% endfor %}
+						{% else %}
+							<tr>
+								<td colspan="4" class="text-center py-4 text-muted">表示できる生産者が見つかりません。</td>
+							</tr>
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="card shadow-sm border-0">
+			<div class="card-header bg-white border-0">
+				<h2 class="h6 mb-0">あなたの評価履歴</h2>
+			</div>
+			<div class="table-responsive">
+				<table class="table align-middle mb-0">
+					<thead class="table-light">
+						<tr>
+							<th scope="col" class="text-nowrap">生産者</th>
+							<th scope="col" class="text-nowrap">評価</th>
+							<th scope="col">コメント</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if evaluation_history %}
+							{% for entry in evaluation_history %}
+							<tr>
+								<td class="fw-semibold">{{ entry.target_user_id.username }}</td>
+								<td>{{ entry.score|floatformat:1 }} / 5.0</td>
+								<td class="text-muted small">{{ entry.comment|default:"(コメントなし)" }}</td>
+							</tr>
+							{% endfor %}
+						{% else %}
+							<tr>
+								<td colspan="3" class="text-center py-4 text-muted">まだ評価履歴がありません。</td>
+							</tr>
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</section>
+{% endblock %}
