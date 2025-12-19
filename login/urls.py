@@ -20,4 +20,5 @@ urlpatterns = [
     path('verify/', views.VerifySignupView.as_view(), name="verify"),
     path('home/', login_required(home_view), name="home"),
     path('password_change/', views.PasswordResetRequestView.as_view(), name="password_change"),
+    path('password_reset/<str:token>/', views.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
 ]

@@ -60,11 +60,12 @@ class PasswordResetRequestForm(forms.Form):
     )
     email = forms.EmailField(
         label="連絡先メールアドレス",
-        required=False,
+        required=True,
         widget=forms.EmailInput(
             attrs={
                 "class": "form-control",
                 "placeholder": "you@example.com",
+                "required": "required",
             }
         ),
     )
@@ -96,9 +97,45 @@ class PasswordResetRequestForm(forms.Form):
             self.add_error("username", "該当するユーザーが見つかりません。")
             return cleaned
 
-        if email and user.email:
-            if email.strip().lower() != user.email.lower():
-                self.add_error("email", "登録済みのメールアドレスと一致していません。")
+        if not user.email:
+            self.add_error("username", "このユーザーにはメールアドレスが登録されていません。管理者へお問い合わせください。")
+            return cleaned
+
+        if email.strip().lower() != user.email.lower():
+            self.add_error("email", "登録済みのメールアドレスと一致していません。")
+            return cleaned
 
         self.user = user
+        return cleaned
+
+
+class PasswordResetConfirmForm(forms.Form):
+    new_password1 = forms.CharField(
+        label="新しいパスワード",
+        widget=forms.PasswordInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "new-password",
+                "placeholder": "新しいパスワード",
+            }
+        ),
+        min_length=8,
+    )
+    new_password2 = forms.CharField(
+        label="新しいパスワード（確認）",
+        widget=forms.PasswordInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "new-password",
+                "placeholder": "新しいパスワードを再入力",
+            }
+        ),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        password1 = cleaned.get("new_password1")
+        password2 = cleaned.get("new_password2")
+        if password1 and password2 and password1 != password2:
+            self.add_error("new_password2", "パスワードが一致しません。")
         return cleaned

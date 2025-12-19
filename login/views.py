@@ -1,18 +1,21 @@
 # This is Project views.py
 
 import secrets
+from datetime import timedelta
 
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
-from .forms import SignupForm, VerificationForm, PasswordResetRequestForm
+from django.urls import reverse
+from django.shortcuts import get_object_or_404
+from .forms import SignupForm, VerificationForm, PasswordResetRequestForm, PasswordResetConfirmForm
 from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.contrib import messages
 from django.urls import reverse_lazy
-from .models import CustomUser, AccountRequest
+from .models import CustomUser, AccountRequest, PasswordResetToken
 from accounts.models import UserProfile
 
 # class homeView(TemplateView):
@@ -112,16 +115,91 @@ class PasswordResetRequestView(FormView):
 
     def form_valid(self, form):
         user = form.user
-        temp_password = secrets.token_urlsafe(9)[:12]
-        user.set_password(temp_password)
-        user.save(update_fields=["password"])
+
+        # invalidate previous unused tokens
+        PasswordResetToken.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+
+        token_value = secrets.token_urlsafe(32)
+        expiry = timezone.now() + timedelta(hours=1)
+        reset_token = PasswordResetToken.objects.create(
+            user=user,
+            token=token_value,
+            expires_at=expiry,
+        )
+
+        reset_url = self.request.build_absolute_uri(
+            reverse("login:password_reset_confirm", args=[reset_token.token])
+        )
+
+        message_lines = [
+            f"{user.username} さん", "",
+            "パスワード再発行の申請を受け付けました。以下のリンクから仮パスワード設定ページにアクセスし、\n新しいパスワードを設定してください。",
+            "",
+            reset_url,
+            "",
+            "リンクの有効期限は1時間です。期限を過ぎた場合は再度申請してください。",
+            "",
+            "このメールに心当たりがない場合は破棄してください。",
+            "",
+            f"Sasutena Project {self.request.get_host()}",
+        ]
+
+        send_mail(
+            subject="【Sasutena】パスワード再設定リンク",
+            message="\n".join(message_lines),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
 
         context = self.get_context_data(
             form=self.form_class(),
-            reset_success=True,
-            temp_password=temp_password,
-            target_user=user,
-            submitted_email=form.cleaned_data.get("email", ""),
-            submitted_note=form.cleaned_data.get("note", ""),
+            reset_email_sent=True,
+            email=user.email,
         )
+        return self.render_to_response(context)
+
+
+class PasswordResetConfirmView(FormView):
+    template_name = "login/password_reset_confirm.html"
+    form_class = PasswordResetConfirmForm
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        token_value = kwargs.get("token", "")
+        self.token_object = PasswordResetToken.objects.filter(token=token_value).select_related("user").first()
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.token_object:
+            return self.render_to_response(
+                self.get_context_data(token_invalid=True, form=self.form_class())
+            )
+        if not self.token_object.is_valid():
+            return self.render_to_response(
+                self.get_context_data(
+                    token_invalid=True,
+                    token_expired=self.token_object.is_expired,
+                    form=self.form_class(),
+                )
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault("token_invalid", False)
+        context.setdefault("token_expired", False)
+        context["username"] = self.token_object.user.username if self.token_object else ""
+        return context
+
+    def form_valid(self, form):
+        user = self.token_object.user
+        new_password = form.cleaned_data["new_password1"]
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        self.token_object.mark_used()
+
+        # invalidate other tokens
+        PasswordResetToken.objects.filter(user=user, used_at__isnull=True).exclude(pk=self.token_object.pk).update(used_at=timezone.now())
+
+        context = self.get_context_data(reset_completed=True, form=self.form_class())
         return self.render_to_response(context)
