@@ -2,176 +2,71 @@
 {% load static %}
 
 {% block content %}
-<body class="bg-light bootstrap-enabled">
-
-<main class="py-4">
-    <div class="container">
-
-        <!-- ===== ページタイトル ===== -->
-        <div class="row mb-4">
-            <div class="col text-center">
-                <h1 class="h4 fw-semibold">設定ページ</h1>
-                <p class="text-muted small">
-                    アカウント情報・通知・セキュリティ設定を変更できます
-                </p>
-            </div>
+<div class="py-4">
+    <div class="row mb-4">
+        <div class="col text-center">
+            <h1 class="h4 fw-semibold">設定ページ</h1>
+            <p class="text-muted small">アカウント情報・通知・セキュリティ設定を変更できます</p>
         </div>
-
-        <!-- =============================
-             プロフィール・通知設定
-        ============================== -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
-
-                <h2 class="h5 mb-3">プロフィール設定</h2>
-
-                <form method="POST" enctype="multipart/form-data" class="vstack gap-3">
-                    {% csrf_token %}
-
-                    <!-- ニックネーム -->
-                    <div>
-                        <label class="form-label small">ニックネーム</label>
-                        {{ form.nick_name }}
-                    </div>
-
-                    <!-- アイコン画像 -->
-                    <div>
-                        <label class="form-label small">アイコン画像</label>
-                        {{ form.icon_image }}
-                        <div class="form-text">
-                            JPG / PNG 推奨
-                        </div>
-                    </div>
-
-                    <!-- 公開設定 -->
-                    <!-- プロフィール公開設定 -->
-                    <div class="form-check form-switch mb-3">
-                        {{ form.publish_profile }}
-                        <label class="form-check-label">
-                            プロフィールを公開する
-                        </label>
-                    </div>
-
-                    <!-- メール通知 -->
-                    <div class="form-check form-switch mb-3">
-                        {{ form.mail_allow }}
-                        <label class="form-check-label">
-                            メール通知を受け取る
-                        </label>
-                    </div>
-
-
-                    <!-- 管理メモ -->
-                    <div>
-                        <label class="form-label small">
-                            管理用メモ（自分にのみ表示）
-                        </label>
-                        <textarea class="form-control" rows="3"
-                            placeholder="気になる申請状況や対応メモを記録できます"></textarea>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            保存する
-                        </button>
-                        <button type="reset" class="btn btn-outline-secondary">
-                            リセット
-                        </button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-
-                <h2 class="h5 mb-3">パスワード変更</h2>
-
-                <form class="vstack gap-3">
-
-                    <div>
-                        <label class="form-label small">現在のパスワード</label>
-                        <input type="password" class="form-control" required>
-                    </div>
-
-                    <div>
-                        <label class="form-label small">新しいパスワード</label>
-                        <input type="password" class="form-control" required>
-                    </div>
-
-                    <div>
-                        <label class="form-label small">新しいパスワード（確認）</label>
-                        <input type="password" class="form-control" required>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            パスワードを更新
-                        </button>
-                        <button type="reset" class="btn btn-outline-secondary">
-                            入力をクリア
-                        </button>
-                    </div>
-                    <p class="small text-muted mb-0">
-                        現在のパスワードが分からない場合は、
-                        <a href="{% url 'login:password_change' %}" class="link-primary">
-                            パスワード再設定ページ
-                        </a>
-                        をご利用ください。
-                    </p>
-
-
-
-                </form>
-
-            </div>
-        </div>
-
     </div>
-</main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3">プロフィール設定</h2>
+            <form method="post" enctype="multipart/form-data" class="vstack gap-3">
+                {% csrf_token %}
+                <div>
+                    <label class="form-label small" for="id_nick_name">ニックネーム</label>
+                    {{ form.nick_name }}
+                </div>
+                <div>
+                    <label class="form-label small" for="id_icon_image">アイコン画像</label>
+                    {{ form.icon_image }}
+                    <div class="form-text">JPG / PNG 推奨</div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    {{ form.publish_profile }}
+                    <label class="form-check-label" for="id_publish_profile">プロフィールを公開する</label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    {{ form.mail_allow }}
+                    <label class="form-check-label" for="id_mail_allow">メール通知を受け取る</label>
+                </div>
+                <div>
+                    <label class="form-label small" for="settingsMemo">管理用メモ（自分にのみ表示）</label>
+                    <textarea id="settingsMemo" class="form-control" rows="3" placeholder="気になる申請状況や対応メモを記録できます"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">保存する</button>
+                    <button type="reset" class="btn btn-outline-secondary">リセット</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <h2 class="h5 mb-3">パスワード変更</h2>
+            <form class="vstack gap-3">
+                <div>
+                    <label class="form-label small" for="currentPassword">現在のパスワード</label>
+                    <input id="currentPassword" type="password" class="form-control" required>
+                </div>
+                <div>
+                    <label class="form-label small" for="newPassword1">新しいパスワード</label>
+                    <input id="newPassword1" type="password" class="form-control" required>
+                </div>
+                <div>
+                    <label class="form-label small" for="newPassword2">新しいパスワード（確認）</label>
+                    <input id="newPassword2" type="password" class="form-control" required>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">パスワードを更新</button>
+                    <button type="reset" class="btn btn-outline-secondary">入力をクリア</button>
+                </div>
+                <p class="small text-muted mb-0">現在のパスワードが分からない場合は、<a href="{% url 'login:password_change' %}" class="link-primary">パスワード再設定ページ</a>をご利用ください。</p>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{% comment %} <h1> 設定 ページ</h1>
-<form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    <!-- {{ form.as_p }} -->
-    <div>
-        <label>ニックネーム</label><br>
-        {{ form.nick_name }}
-    </div>
-    <div>
-        <label>公開設定</label><br>
-        {{ form.publish_profile }}
-    </div>
-    <div>
-        <label>メール受信設定</label><br>
-        {{ form.mail_allow }}
-    </div>
-    <div>
-        <label>アイコン画像</label><br>
-        {{ form.icon_image }}
-    </div>
-    <button type="submit">保存</button>
-</form> {% endcomment %}
