@@ -64,9 +64,29 @@
       <div class="card h-100 shadow-sm border-0" id="conversationCard"
            data-initial-url="{{ initial_conversation_url }}"
            data-initial-username="{{ initial_username }}">
-        <div class="card-header bg-white">
-          <h2 class="h5 mb-0" id="conversationTitle">会話相手を選択してください</h2>
-          <div class="small text-muted" id="conversationSubtitle">左のリストからユーザーを選択してください。</div>
+
+        <div class="card-header bg-white d-flex justify-content-between align-items-start">
+
+          <!-- 左側：タイトル -->
+          <div>
+            <h2 class="h5 mb-0" id="conversationTitle">
+            会話相手を選択してください
+          </h2>
+          <div class="small text-muted" id="conversationSubtitle">
+            左のリストからユーザーを選択してください。
+          </div>
+        </div>
+
+        <!-- 右側：プロフィールボタン -->
+        <a
+          id="profileButton"
+          href="#"
+          class="btn btn-outline-primary btn-sm d-none"
+          data-profile-url-template="{% url 'accounts:profile_detail' '__USERNAME__' %}"
+        >
+          プロフィール
+        </a>
+
         </div>
         <div class="card-body bg-light d-flex flex-column gap-3">
           <section id="threadPicker">
@@ -133,6 +153,7 @@
   const formWrapper = document.getElementById('messageFormWrapper');
   const titleEl = document.getElementById('conversationTitle');
   const subtitleEl = document.getElementById('conversationSubtitle');
+  const profileButton = document.getElementById('profileButton');
   let currentUrl = '';
   let selectedUserButton = null;
   let activeThreadButton = null;
@@ -313,6 +334,9 @@
     formWrapper.hidden = true;
     formWrapper.innerHTML = '';
     currentUrl = '';
+    if (profileButton) {
+      profileButton.classList.add('d-none');
+    }
   }
 
   function applyThreadBinding(form, threadElement) {
@@ -635,6 +659,15 @@
     titleEl.textContent = username + ' さんとの会話';
     subtitleEl.textContent = 'トークを選択してください。';
     clearConversation(username);
+
+
+    if (profileButton) {
+      const template = profileButton.dataset.profileUrlTemplate;
+      profileButton.href = template.replace('__USERNAME__', username);
+      profileButton.textContent = `${username} のプロフィール`;
+      profileButton.classList.remove('d-none');
+    }
+
 
     if (threadUrl) {
       const group = getThreadGroup(username);
