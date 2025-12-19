@@ -43,3 +43,62 @@ class SignupForm(forms.ModelForm):
 class VerificationForm(forms.Form):
     email = forms.EmailField(label="メールアドレス")
     code = forms.CharField(label="認証コード", max_length=6)
+
+
+class PasswordResetRequestForm(forms.Form):
+    username = forms.CharField(
+        label="ログインID（ユーザー名）",
+        max_length=150,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "username",
+                "placeholder": "例: producer1",
+                "required": "required",
+            }
+        ),
+    )
+    email = forms.EmailField(
+        label="連絡先メールアドレス",
+        required=False,
+        widget=forms.EmailInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "you@example.com",
+            }
+        ),
+    )
+    note = forms.CharField(
+        label="補足（任意）",
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "ログインできなくなった経緯など",
+            }
+        ),
+    )
+
+    user = None
+
+    def clean(self):
+        cleaned = super().clean()
+        username = cleaned.get("username")
+        email = cleaned.get("email")
+
+        if not username:
+            return cleaned
+
+        try:
+            user = CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            self.add_error("username", "該当するユーザーが見つかりません。")
+            return cleaned
+
+        if email and user.email:
+            if email.strip().lower() != user.email.lower():
+                self.add_error("email", "登録済みのメールアドレスと一致していません。")
+
+        self.user = user
+        return cleaned

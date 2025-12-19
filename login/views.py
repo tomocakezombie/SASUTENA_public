@@ -1,9 +1,11 @@
 # This is Project views.py
 
+import secrets
+
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
-from .forms import SignupForm, VerificationForm
+from .forms import SignupForm, VerificationForm, PasswordResetRequestForm
 from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import redirect
@@ -102,3 +104,24 @@ class VerifySignupView(FormView):
         messages.success(self.request, "アカウント登録申請が完了しました。ログインしてください。")
         success_url = reverse_lazy("login:index")  
         return super().form_valid(form)
+
+
+class PasswordResetRequestView(FormView):
+    template_name = "login/password_change.html"
+    form_class = PasswordResetRequestForm
+
+    def form_valid(self, form):
+        user = form.user
+        temp_password = secrets.token_urlsafe(9)[:12]
+        user.set_password(temp_password)
+        user.save(update_fields=["password"])
+
+        context = self.get_context_data(
+            form=self.form_class(),
+            reset_success=True,
+            temp_password=temp_password,
+            target_user=user,
+            submitted_email=form.cleaned_data.get("email", ""),
+            submitted_note=form.cleaned_data.get("note", ""),
+        )
+        return self.render_to_response(context)

@@ -83,9 +83,6 @@
             </div>
         </div>
 
-        <!-- =============================
-             パスワード変更
-        ============================== -->
         <div class="card shadow-sm border-0">
             <div class="card-body">
 
@@ -116,25 +113,13 @@
                             入力をクリア
                         </button>
                     </div>
-
-
-
-
                     <p class="small text-muted mb-0">
                         現在のパスワードが分からない場合は、
-                        パスワード再設定ページをご利用ください。
-                    </p>
-
-
-                    
-                    {% comment %} パスワード再設定の画面ができたらこっちのコードを使うのがよさげ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-                    <p class="small text-muted mb-0">
-                        現在のパスワードが分からない場合は、
-                        <a href="{% url 'password_reset' %}" class="link-primary">
+                        <a href="{% url 'login:password_change' %}" class="link-primary">
                             パスワード再設定ページ
                         </a>
                         をご利用ください。
-                    </p> {% endcomment %}
+                    </p>
 
 
 
