@@ -4,7 +4,7 @@ from django import forms
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Product, ProductApplication
+from .models import Product, ProductApplication, ProductComment
 
 
 class ProductForm(forms.ModelForm):
@@ -103,4 +103,23 @@ class ProductApplicationForm(forms.ModelForm):
     class Meta:
         model = ProductApplication
         fields = ["message"]
+
+
+class ProductCommentForm(forms.ModelForm):
+    content = forms.CharField(
+        label="コメントを投稿",
+        max_length=511,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "コメントを入力してください",
+                "maxlength": 511,
+            }
+        ),
+    )
+
+    class Meta:
+        model = ProductComment
+        fields = ["content"]
 

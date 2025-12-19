@@ -1,9 +1,10 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
-from .forms import ProductForm, ProductApplicationForm
-from .models import Product, ProductApplication
+from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
+from .models import Product, ProductApplication, ProductComment
 
 @login_required
 def product_create(request):
@@ -63,6 +64,7 @@ def product_detail(request, pk):
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
     applications = product.applications.select_related('user')
+    comments = product.comments.filter(delete_flag=False).select_related('user')
     user_application = applications.filter(user=request.user).first()
 
     can_apply = (
@@ -73,37 +75,85 @@ def product_detail(request, pk):
         and not product.completed
     )
 
-    form = None
+    application_form = ProductApplicationForm() if can_apply and not user_application else None
+    comment_form = ProductCommentForm()
 
     if request.method == 'POST':
-        if not can_apply:
-            messages.warning(request, 'この商品には申込みできません。')
-            return redirect('product:product_detail', pk=product.pk)
+        form_type = request.POST.get('form_type')
+        if form_type == 'comment':
+            comment_form = ProductCommentForm(request.POST)
+            if comment_form.is_valid():
+                ProductComment.objects.create(
+                    product=product,
+                    user=request.user,
+                    content=comment_form.cleaned_data['content'],
+                )
+                messages.success(request, 'コメントを投稿しました。')
+                return redirect('product:product_detail', pk=product.pk)
+        else:
+            if not can_apply:
+                messages.warning(request, 'この商品には申込みできません。')
+                return redirect('product:product_detail', pk=product.pk)
 
-        if user_application:
-            messages.info(request, 'すでに申込み済みです。')
-            return redirect('product:product_detail', pk=product.pk)
+            if user_application:
+                messages.info(request, 'すでに申込み済みです。')
+                return redirect('product:product_detail', pk=product.pk)
 
-        form = ProductApplicationForm(request.POST)
-        if form.is_valid():
-            ProductApplication.objects.create(
-                product=product,
-                user=request.user,
-                hope_time=form.cleaned_data.get('hope_time'),
-                quantity=form.cleaned_data.get('quantity') or 1,
-                message=form.cleaned_data.get('message', ''),
-            )
-            messages.success(request, '申込みを送信しました。生産者からの連絡をお待ちください。')
-            return redirect('product:product_detail', pk=product.pk)
-    else:
-        if can_apply and not user_application:
-            form = ProductApplicationForm()
+            application_form = ProductApplicationForm(request.POST)
+            if application_form.is_valid():
+                ProductApplication.objects.create(
+                    product=product,
+                    user=request.user,
+                    hope_time=application_form.cleaned_data.get('hope_time'),
+                    quantity=application_form.cleaned_data.get('quantity') or 1,
+                    message=application_form.cleaned_data.get('message', ''),
+                )
+                messages.success(request, '申込みを送信しました。生産者からの連絡をお待ちください。')
+                return redirect('product:product_detail', pk=product.pk)
 
     return render(request, 'product/product_detail.html', {
         'product': product,
         'is_owner': is_owner,
         'applications': applications.order_by('-apply_time'),
         'show_apply_button': can_apply and user_application is None,
-        'application_form': form,
+        'application_form': application_form,
         'user_application': user_application,
+        'comments': comments,
+        'comment_form': comment_form,
     })
+
+
+@login_required
+@require_POST
+def product_comment_update(request, comment_id):
+    comment = get_object_or_404(ProductComment, pk=comment_id, delete_flag=False)
+
+    if comment.user != request.user:
+        messages.warning(request, '自分のコメントのみ編集できます。')
+        return redirect('product:product_detail', pk=comment.product.pk)
+
+    form = ProductCommentForm(request.POST, instance=comment)
+    if form.is_valid():
+        comment.content = form.cleaned_data['content']
+        comment.edit_flag = True
+        comment.save(update_fields=['content', 'edit_flag'])
+        messages.success(request, 'コメントを更新しました。')
+    else:
+        messages.error(request, 'コメントの更新に失敗しました。内容を確認してください。')
+
+    return redirect('product:product_detail', pk=comment.product.pk)
+
+
+@login_required
+@require_POST
+def product_comment_delete(request, comment_id):
+    comment = get_object_or_404(ProductComment, pk=comment_id, delete_flag=False)
+
+    if comment.user != request.user:
+        messages.warning(request, '自分のコメントのみ削除できます。')
+        return redirect('product:product_detail', pk=comment.product.pk)
+
+    comment.delete_flag = True
+    comment.save(update_fields=['delete_flag'])
+    messages.success(request, 'コメントを削除しました。')
+    return redirect('product:product_detail', pk=comment.product.pk)

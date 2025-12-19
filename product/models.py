@@ -61,3 +61,28 @@ class ProductApplication(models.Model):
 
     def __str__(self):
         return f"Application {self.apply_id} for {self.product} by {self.user}"
+
+
+class ProductComment(models.Model):
+    item_comment_id = models.BigAutoField(primary_key=True, db_column="item_comment_id")
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="comments",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="product_comments",
+    )
+    content = models.CharField(max_length=511, db_column="content")
+    comment_time = models.DateTimeField(auto_now_add=True, db_column="comment_time")
+    delete_flag = models.BooleanField(default=False, db_column="delete_flag")
+    edit_flag = models.BooleanField(default=False, db_column="edit_flag")
+
+    class Meta:
+        ordering = ("-comment_time",)
+        db_table = "product_productcomment"
+
+    def __str__(self):
+        return f"Comment by {self.user} on {self.product}"
