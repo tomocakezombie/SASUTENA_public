@@ -2,8 +2,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .forms import ProductForm, ProductApplicationForm
-from .models import Product, ProductApplication
+from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
+from .models import Product, ProductApplication, ProductComment
 
 @login_required
 def product_create(request):
@@ -63,6 +63,7 @@ def product_detail(request, pk):
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
     applications = product.applications.select_related('user')
+    comments = product.comments.filter(delete_flag=False).select_related('user')
     user_application = applications.filter(user=request.user).first()
 
     can_apply = (
@@ -73,37 +74,49 @@ def product_detail(request, pk):
         and not product.completed
     )
 
-    form = None
+    application_form = ProductApplicationForm() if can_apply and not user_application else None
+    comment_form = ProductCommentForm()
 
     if request.method == 'POST':
-        if not can_apply:
-            messages.warning(request, 'この商品には申込みできません。')
-            return redirect('product:product_detail', pk=product.pk)
+        form_type = request.POST.get('form_type')
+        if form_type == 'comment':
+            comment_form = ProductCommentForm(request.POST)
+            if comment_form.is_valid():
+                ProductComment.objects.create(
+                    product=product,
+                    user=request.user,
+                    content=comment_form.cleaned_data['content'],
+                )
+                messages.success(request, 'コメントを投稿しました。')
+                return redirect('product:product_detail', pk=product.pk)
+        else:
+            if not can_apply:
+                messages.warning(request, 'この商品には申込みできません。')
+                return redirect('product:product_detail', pk=product.pk)
 
-        if user_application:
-            messages.info(request, 'すでに申込み済みです。')
-            return redirect('product:product_detail', pk=product.pk)
+            if user_application:
+                messages.info(request, 'すでに申込み済みです。')
+                return redirect('product:product_detail', pk=product.pk)
 
-        form = ProductApplicationForm(request.POST)
-        if form.is_valid():
-            ProductApplication.objects.create(
-                product=product,
-                user=request.user,
-                hope_time=form.cleaned_data.get('hope_time'),
-                quantity=form.cleaned_data.get('quantity') or 1,
-                message=form.cleaned_data.get('message', ''),
-            )
-            messages.success(request, '申込みを送信しました。生産者からの連絡をお待ちください。')
-            return redirect('product:product_detail', pk=product.pk)
-    else:
-        if can_apply and not user_application:
-            form = ProductApplicationForm()
+            application_form = ProductApplicationForm(request.POST)
+            if application_form.is_valid():
+                ProductApplication.objects.create(
+                    product=product,
+                    user=request.user,
+                    hope_time=application_form.cleaned_data.get('hope_time'),
+                    quantity=application_form.cleaned_data.get('quantity') or 1,
+                    message=application_form.cleaned_data.get('message', ''),
+                )
+                messages.success(request, '申込みを送信しました。生産者からの連絡をお待ちください。')
+                return redirect('product:product_detail', pk=product.pk)
 
     return render(request, 'product/product_detail.html', {
         'product': product,
         'is_owner': is_owner,
         'applications': applications.order_by('-apply_time'),
         'show_apply_button': can_apply and user_application is None,
-        'application_form': form,
+        'application_form': application_form,
         'user_application': user_application,
+        'comments': comments,
+        'comment_form': comment_form,
     })
