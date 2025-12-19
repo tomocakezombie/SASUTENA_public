@@ -33,6 +33,28 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        text_inputs = [
+            ("item_name", {"placeholder": "例：朝採れトマト10個入り"}),
+            ("description", {"placeholder": "商品の状態や受渡条件、受け渡し場所などを記入", "rows": 4}),
+        ]
+        for field_name, extra_attrs in text_inputs:
+            base_attrs = {"class": "form-control"}
+            base_attrs.update(extra_attrs)
+            self.fields[field_name].widget.attrs.update(base_attrs)
+
+        number_attrs = {"class": "form-control", "min": 1}
+        self.fields["number"].widget.attrs.update(number_attrs)
+
+        date_attrs = {"class": "form-control", "placeholder": "yyyy/mm/dd"}
+        self.fields["start_date"].widget.attrs.update(date_attrs)
+        self.fields["end_date"].widget.attrs.update(date_attrs.copy())
+
+        time_attrs = {"class": "form-control"}
+        self.fields["start_clock"].widget.attrs.update(time_attrs)
+        self.fields["end_clock"].widget.attrs.update(time_attrs.copy())
+
+        self.fields["item_image"].widget.attrs.update({"class": "form-control"})
+
         start_dt = getattr(self.instance, "start_time", None)
         if start_dt:
             localized = timezone.localtime(start_dt) if timezone.is_aware(start_dt) else start_dt
