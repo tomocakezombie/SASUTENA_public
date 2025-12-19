@@ -20,5 +20,7 @@ urlpatterns = [
     path('signup/done/', TemplateView.as_view(template_name="login/signup_done.html"), name="signup_done"),
     path('verify/', views.VerifySignupView.as_view(), name="verify"),
     path('home/', login_required(home_view), name="home"),
+    path('password_change/', views.PasswordResetRequestView.as_view(), name="password_change"),
+    path('password_reset/<str:token>/', views.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
     path('consumer/portal/', views.consumer_portal, name="consumer_portal"),
 ]
