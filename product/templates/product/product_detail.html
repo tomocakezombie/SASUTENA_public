@@ -57,7 +57,7 @@
 						<dt class="col-sm-3 col-lg-2 text-muted small mb-0">受け渡し</dt>
 						<dd class="col-sm-9 col-lg-10 fw-semibold mb-0">
 							{% if product.start_time and product.end_time %}
-								{{ product.start_time|date:'Y/m/d' }}〜{{ product.end_time|date:'Y/m/d' }}
+								{{ product.start_time|date:'Y/m/d H:i' }}〜{{ product.end_time|date:'Y/m/d H:i' }}
 							{% elif product.start_time %}
 								{{ product.start_time|date:'Y/m/d H:i' }}
 							{% elif product.end_time %}
