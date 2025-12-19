@@ -1,7 +1,8 @@
 import json
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.db.models import Avg, Count
@@ -102,34 +103,52 @@ def settings(request):
 
 	old_icon_name = profile.icon_image.name if profile.icon_image else None
 
-	form = userSettings(
-		request.POST or None,
-		request.FILES or None,
+	profile_form = userSettings(
+		request.POST if request.method == "POST" and request.POST.get("form_type") == "profile" else None,
+		request.FILES if request.method == "POST" and request.POST.get("form_type") == "profile" else None,
 		instance=profile,
 	)
+	password_form = PasswordChangeForm(
+		user=request.user,
+		data=request.POST if request.method == "POST" and request.POST.get("form_type") == "password" else None,
+	)
+	for field in password_form.fields.values():
+		existing_classes = field.widget.attrs.get("class", "")
+		field.widget.attrs["class"] = (existing_classes + " form-control").strip()
 
-	if request.method == "POST" and form.is_valid():
-		updated_profile = form.save(commit=False)
-		icon_field = form.cleaned_data.get("icon_image")
+	if request.method == "POST":
+		form_type = request.POST.get("form_type")
+		if form_type == "profile" and profile_form.is_valid():
+			updated_profile = profile_form.save(commit=False)
+			icon_field = profile_form.cleaned_data.get("icon_image")
 
-		if icon_field is False:
-			updated_profile.icon_image = None
-		if not updated_profile.nick_name:
-			updated_profile.nick_name = request.user.username
-		updated_profile.save()
-		form.save_m2m()
+			if icon_field is False:
+				updated_profile.icon_image = None
+			if not updated_profile.nick_name:
+				updated_profile.nick_name = request.user.username
+			updated_profile.save()
+			profile_form.save_m2m()
 
-		new_icon_name = updated_profile.icon_image.name if updated_profile.icon_image else None
-		if old_icon_name and old_icon_name != new_icon_name:
-			default_storage.delete(old_icon_name)
-		return redirect("accounts:my_page")
+			new_icon_name = updated_profile.icon_image.name if updated_profile.icon_image else None
+			if old_icon_name and old_icon_name != new_icon_name:
+				default_storage.delete(old_icon_name)
+			messages.success(request, "プロフィールを更新しました。")
+			return redirect("accounts:settings")
+		if form_type == "password" and password_form.is_valid():
+			user = password_form.save()
+			update_session_auth_hash(request, user)
+			messages.success(request, "パスワードを更新しました。")
+			return redirect("accounts:settings")
+		if form_type not in {"profile", "password"}:
+			messages.error(request, "送信内容を処理できませんでした。改めてお試しください。")
 
 	return render(
 		request,
 		"accounts/settings.html",
 		{
 			"profile": profile,
-			"form": form,
+			"profile_form": profile_form,
+			"password_form": password_form,
 		},
 	)
 

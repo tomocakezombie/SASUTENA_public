@@ -15,22 +15,40 @@
             <h2 class="h5 mb-3">プロフィール設定</h2>
             <form method="post" enctype="multipart/form-data" class="vstack gap-3">
                 {% csrf_token %}
+                <input type="hidden" name="form_type" value="profile">
+                {% if profile_form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ profile_form.non_field_errors|join:"<br>"|safe }}
+                </div>
+                {% endif %}
                 <div>
                     <label class="form-label small" for="id_nick_name">ニックネーム</label>
-                    {{ form.nick_name }}
+                    {{ profile_form.nick_name }}
+                    {% if profile_form.nick_name.errors %}
+                    <div class="invalid-feedback d-block">{{ profile_form.nick_name.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div>
                     <label class="form-label small" for="id_icon_image">アイコン画像</label>
-                    {{ form.icon_image }}
+                    {{ profile_form.icon_image }}
                     <div class="form-text">JPG / PNG 推奨</div>
+                    {% if profile_form.icon_image.errors %}
+                    <div class="invalid-feedback d-block">{{ profile_form.icon_image.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="form-check form-switch mb-3">
-                    {{ form.publish_profile }}
+                    {{ profile_form.publish_profile }}
                     <label class="form-check-label" for="id_publish_profile">プロフィールを公開する</label>
+                    {% if profile_form.publish_profile.errors %}
+                    <div class="invalid-feedback d-block">{{ profile_form.publish_profile.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="form-check form-switch mb-3">
-                    {{ form.mail_allow }}
+                    {{ profile_form.mail_allow }}
                     <label class="form-check-label" for="id_mail_allow">メール通知を受け取る</label>
+                    {% if profile_form.mail_allow.errors %}
+                    <div class="invalid-feedback d-block">{{ profile_form.mail_allow.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div>
                     <label class="form-label small" for="settingsMemo">管理用メモ（自分にのみ表示）</label>
@@ -47,18 +65,36 @@
     <div class="card shadow-sm border-0">
         <div class="card-body">
             <h2 class="h5 mb-3">パスワード変更</h2>
-            <form class="vstack gap-3">
+            <form method="post" class="vstack gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="password">
+                {% if password_form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ password_form.non_field_errors|join:"<br>"|safe }}
+                </div>
+                {% endif %}
                 <div>
-                    <label class="form-label small" for="currentPassword">現在のパスワード</label>
-                    <input id="currentPassword" type="password" class="form-control" required>
+                    <label class="form-label small" for="id_old_password">現在のパスワード</label>
+                    {{ password_form.old_password }}
+                    {% if password_form.old_password.errors %}
+                    <div class="invalid-feedback d-block">{{ password_form.old_password.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div>
-                    <label class="form-label small" for="newPassword1">新しいパスワード</label>
-                    <input id="newPassword1" type="password" class="form-control" required>
+                    <label class="form-label small" for="id_new_password1">新しいパスワード</label>
+                    {{ password_form.new_password1 }}
+                    {% if password_form.new_password1.errors %}
+                    <div class="invalid-feedback d-block">{{ password_form.new_password1.errors.0 }}</div>
+                    {% else %}
+                    <div class="form-text">8文字以上で設定してください。</div>
+                    {% endif %}
                 </div>
                 <div>
-                    <label class="form-label small" for="newPassword2">新しいパスワード（確認）</label>
-                    <input id="newPassword2" type="password" class="form-control" required>
+                    <label class="form-label small" for="id_new_password2">新しいパスワード（確認）</label>
+                    {{ password_form.new_password2 }}
+                    {% if password_form.new_password2.errors %}
+                    <div class="invalid-feedback d-block">{{ password_form.new_password2.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button type="submit" class="btn btn-primary">パスワードを更新</button>
