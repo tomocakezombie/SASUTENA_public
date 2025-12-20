@@ -590,7 +590,7 @@
     return button;
   }
 
-  function syncUserPreview(username, threadElement) {
+  function syncUserPreview(username, threadElement,shouldMove) {
     if (!userList) {
       return;
     }
@@ -614,6 +614,9 @@
       const authorLabel = authorNode ? authorNode.textContent.trim() : '';
       const previewLine = authorLabel ? authorLabel + ': ' + previewContent : previewContent;
       previewLabel.textContent = '最新: ' + previewLine;
+    }
+    if(shouldMove && button && userList){
+      userList.prepend(button);
     }
   }
 
@@ -662,7 +665,8 @@
     }
 
     const syncedButton = syncThreadButton(thread);
-    syncUserPreview(counterpart, thread);
+    const shouldMove = !triggerButton;
+    syncUserPreview(counterpart, thread,shouldMove);
 
     if (triggerButton) {
       setActiveThread(triggerButton);
@@ -751,7 +755,7 @@
     if (!badge) return 0;
 
     const count = parseInt(badge.textContent, 10) || 0;
-    badge.remove(); // ← スレッド側の通知を消す
+    badge.remove();
     return count;
   }
 
@@ -772,7 +776,7 @@
     if (next > 0) {
       badge.textContent = next;
     } else {
-      badge.remove(); // 0以下なら消す
+      badge.remove(); 
     }
   }
 
@@ -789,7 +793,7 @@
     if (next > 0) {
       badge.textContent = next;
     } else {
-      badge.remove(); // 0以下なら消す
+      badge.remove(); 
     }
   }
 
