@@ -266,14 +266,14 @@ def conversation_list(request):
     return render(request, "comunicate/conversation_list.html", context)
 
 
-def _apply_read_flags(user, messages_qs):
-    unread_ids = []
-    for msg in messages_qs:
-        if msg.receive_user == user and not msg.read_flag:
-            unread_ids.append(msg.pk)
-            msg.read_flag = True
-    if unread_ids:
-        Message.objects.filter(pk__in=unread_ids).update(read_flag=True)
+# def _apply_read_flags(user, messages_qs):
+#     unread_ids = []
+#     for msg in messages_qs:
+#         if msg.receive_user == user and not msg.read_flag:
+#             unread_ids.append(msg.pk)
+#             msg.read_flag = True
+#     if unread_ids:
+#         Message.objects.filter(pk__in=unread_ids).update(read_flag=True)
 
 
 @login_required
@@ -293,7 +293,23 @@ def conversation_detail(request, username, item_id=None):
             raise Http404("指定された商品は会話参加者のものではありません。")
 
     messages_qs = list(_conversation_queryset(request.user, target_user, thread_item))
-    _apply_read_flags(request.user, messages_qs)
+    # _apply_read_flags(request.user, messages_qs)
+    
+    qs = Message.objects.filter(
+        receive_user=request.user,
+        send_user=target_user,
+        # item=thread_item,         
+        read_flag=False,
+        delete_flag=False,
+    )#.update(read_flag=True)
+    
+    if thread_item is None:
+        qs = qs.filter(item__isnull=True)
+    else:
+        qs = qs.filter(item=thread_item)
+
+    qs.update(read_flag=True)
+    
 
     if messages_qs and thread_item is None:
         thread_item = messages_qs[0].item
