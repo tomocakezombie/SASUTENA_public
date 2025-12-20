@@ -2,6 +2,27 @@
 
 {% block title %}商品詳細{% endblock %}
 
+{% block extra_css %}
+	{{ block.super }}
+	<style>
+		.comment-bubble {
+			background-color: #ffffff;
+			border: 1px solid rgba(0, 0, 0, 0.1);
+			border-radius: 0.75rem;
+		}
+
+		.comment-bubble-self {
+			background-color: var(--bs-primary-bg-subtle);
+			border-color: rgba(13, 110, 253, 0.3);
+			color: #0b3c82;
+		}
+
+		.comment-bubble-self .text-muted {
+			color: rgba(11, 60, 130, 0.7) !important;
+		}
+	</style>
+{% endblock %}
+
 {% block content %}
 <section class="py-4">
 	<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -125,41 +146,43 @@
 									<span class="fw-semibold">{{ comment.user.username|first|default:"?" }}</span>
 								</span>
 								<div class="flex-grow-1">
-									<div class="d-flex justify-content-between align-items-start gap-2">
-										<div class="d-flex flex-wrap align-items-center gap-2">
-											<span class="fw-semibold">
-												{% if comment.user == user %}
-													あなた
-												{% else %}
-													{{ comment.user.username }}
+									<div class="comment-bubble p-3{% if comment.user == user %} comment-bubble-self{% endif %}">
+										<div class="d-flex justify-content-between align-items-start gap-2">
+											<div class="d-flex flex-wrap align-items-center gap-2">
+												<span class="fw-semibold">
+													{% if comment.user == user %}
+														あなた
+													{% else %}
+														{{ comment.user.username }}
+													{% endif %}
+												</span>
+												<span class="text-muted small">{{ comment.comment_time|date:'Y/m/d H:i' }}</span>
+												{% if comment.edit_flag %}
+													<span class="text-muted small">編集済み</span>
 												{% endif %}
-											</span>
-											<span class="text-muted small">{{ comment.comment_time|date:'Y/m/d H:i' }}</span>
-											{% if comment.edit_flag %}
-												<span class="text-muted small">編集済み</span>
+											</div>
+											{% if comment.user == user %}
+												<div class="dropdown">
+													<button class="btn btn-sm text-muted p-0 bg-transparent border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+														<span class="fs-5 lh-1">⋮</span>
+														<span class="visually-hidden">コメント操作</span>
+													</button>
+													<ul class="dropdown-menu dropdown-menu-end">
+														<li>
+															<button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.item_comment_id }}">コメントを編集</button>
+														</li>
+														<li>
+															<form method="post" action="{% url 'product:comment_delete' comment.item_comment_id %}" class="comment-delete-form">
+																{% csrf_token %}
+																<button type="submit" class="dropdown-item text-danger">コメントを削除</button>
+															</form>
+														</li>
+													</ul>
+												</div>
 											{% endif %}
 										</div>
-										{% if comment.user == user %}
-											<div class="dropdown">
-												<button class="btn btn-sm text-muted p-0 bg-transparent border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-													<span class="fs-5 lh-1">⋮</span>
-													<span class="visually-hidden">コメント操作</span>
-												</button>
-												<ul class="dropdown-menu dropdown-menu-end">
-													<li>
-														<button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.item_comment_id }}">コメントを編集</button>
-													</li>
-													<li>
-														<form method="post" action="{% url 'product:comment_delete' comment.item_comment_id %}" class="comment-delete-form">
-															{% csrf_token %}
-															<button type="submit" class="dropdown-item text-danger">コメントを削除</button>
-														</form>
-													</li>
-												</ul>
-											</div>
-										{% endif %}
+										<p class="text-muted small mb-0">{{ comment.content|linebreaksbr }}</p>
 									</div>
-									<p class="text-muted small mb-0">{{ comment.content|linebreaksbr }}</p>
 								</div>
 							</div>
 							{% if comment.user == user %}
