@@ -23,10 +23,6 @@ from .forms import SignupForm, VerificationForm
 from .models import CustomUser, AccountRequest
 from accounts.models import UserProfile
 
-# class homeView(TemplateView):
-#     # template_name = "home.html"
-#     return TemplateView.as_view(template_name="home.html")
-
 def helloworld(request):
     return HttpResponse("Hello Django!")
 
@@ -44,9 +40,11 @@ class RoleBasedLoginView(LoginView):
         role = getattr(user, "role", "")
 
         if role == "producer":
-            return reverse_lazy("product:product_create")
+            return reverse_lazy("product:producer_product_list")
         if role == "consumer":
             return reverse_lazy("login:consumer_portal")
+        if role == "admin":
+            return reverse_lazy("adminPortal:admin_portal_list")
 
         return reverse_lazy("login:index")
 
@@ -105,31 +103,30 @@ class VerifySignupView(FormView):
             form.add_error(None, "このユーザー名は既に登録されています。")
             return self.form_invalid(form)
 
-        # 1. まず loginアプリの CustomUser を作成・保存
+        # 1. loginアプリの CustomUser を作成・保存
         new_user = CustomUser.objects.create_user(
             username=account_request.username,
             email=account_request.email,
             password=account_request.password, # create_userを使うとハッシュ化されます
-            role=account_request.role
+            role=account_request.role,
+            is_active=False,
         )
 
-        # 2. 次に accountsアプリの UserProfile を作成して紐付け
-        # 設計書にある初期値があればここで設定
+        # 2. accountsアプリの UserProfile を作成して紐付け
         UserProfile.objects.create(
             user=new_user,
-            nick_name=account_request.username, # 初期値としてユーザー名を入れるなど
+            nick_name=account_request.username,
             publish_profile=True,
             mail_allow=True
         )
 
         # 3. リクエスト済みデータのクリーンアップ
-        account_request.is_approved = True
+        account_request.is_approved = False
         account_request.save()
         
-        # return redirect('login:login_success') # ログイン画面やダッシュボードへ
         account_request.save(update_fields=["is_approved", "verification_code", "verification_expires_at"])
         self.request.session.pop("pending_email", None)
-        messages.success(self.request, "アカウント登録申請が完了しました。ログインしてください。")
+        messages.success(self.request, "アカウント登録申請が完了しました。\n 管理者が承認次第、ログイン可能になります。")
         success_url = reverse_lazy("login:index")  
         return super().form_valid(form)
 
@@ -228,14 +225,23 @@ class PasswordResetConfirmView(FormView):
 
         context = self.get_context_data(reset_completed=True, form=self.form_class())
         return self.render_to_response(context)
+    
 @login_required
 def consumer_portal(request):
     role = getattr(request.user, "role", "")
-    if role != "consumer":
-        if role == "producer":
-            return redirect("product:product_create")
-        return redirect("login:home")
 
-    return render(request, "login/consumer_portal.html", {
-        "user_profile": getattr(request.user, "userprofile", None),
-    })
+    if role == "consumer":
+        return render(
+            request,
+            "login/consumer_portal.html",
+            {
+                "user_profile": getattr(request.user, "userprofile", None),
+            },
+        )
+
+    # 以下ありえないケース
+
+    if role == "producer":
+        return redirect("product:producer_product_list")
+    
+    return redirect("login:home")
