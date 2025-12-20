@@ -17,9 +17,27 @@
         
         {% if user.is_authenticated %}
         <!-- ▼ ログイン後：マイページメニュー -->
-        <a href="{% url 'comunicate:conversation_list'%}" type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" id="navMessagesBtn">
+        {% comment %} <a href="{% url 'comunicate:conversation_list'%}" type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" id="navMessagesBtn">
           <i class="bi bi-chat-dots fs-5"></i>
+        </a> {% endcomment %}
+
+        <a href="{% url 'comunicate:conversation_list'%}"
+          class="btn btn-outline-secondary position-relative d-flex align-items-center gap-2"
+          id="navMessagesBtn">
+
+          <i class="bi bi-chat-dots fs-5"></i>
+
+          {% if unread_message_count > 0 %}
+            <span
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {{ unread_message_count }}
+            </span>
+          {% endif %}
+
         </a>
+
+
+
         <div class="dropdown">
           <button type="button" 
                   class="btn btn-outline-primary d-flex align-items-center gap-2"

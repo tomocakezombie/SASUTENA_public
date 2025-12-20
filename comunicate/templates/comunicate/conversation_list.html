@@ -46,11 +46,21 @@
             </div>
             <div class="text-end">
               {% if first_thread and first_thread.latest_time %}
-              <div class="small text-muted">{{ first_thread.latest_time|date:"n/j H:i" }}</div>
+              <div class="small text-muted">
+                {{ first_thread.latest_time|date:"n/j H:i" }}
+              </div>
               {% endif %}
-              {% if entry.unread %}
+
+              {% if entry.unread_count > 0 %}
+                <span class="badge text-bg-warning mt-1">
+                  {% comment %} {{ thread.unread_count }} {% endcomment %}
+                  {{ entry.unread_count }}
+                </span>
+              {% endif %}
+
+              {% comment %} {% if entry.unread %}
               <span class="badge text-bg-danger mt-1">新着</span>
-              {% endif %}
+              {% endif %} {% endcomment %}
             </div>
           </button>
           {% endwith %}
@@ -123,7 +133,14 @@
                   </div>
                   <div class="text-end">
                     {% if thread.latest_time %}<div class="small text-muted">{{ thread.latest_time|date:"n/j H:i" }}</div>{% endif %}
-                    {% if thread.unread %}<span class="badge text-bg-warning mt-1">新着</span>{% endif %}
+                    {% comment %} {% if thread.unread %}<span class="badge text-bg-warning mt-1">新着</span>{% endif %} {% endcomment %}
+
+                    {% if thread.unread_count > 0 %}
+                      <span class="badge text-bg-danger mt-1">
+                        {{ thread.unread_count }}
+                      </span>
+                    {% endif %}
+
                   </div>
                 </button>
                 {% endfor %}
