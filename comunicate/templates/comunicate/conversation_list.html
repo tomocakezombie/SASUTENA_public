@@ -18,6 +18,13 @@
         <div class="card-header bg-white">
           <h1 class="h5 mb-0">会話相手</h1>
         </div>
+
+        <div class="input-group mb-2">
+          <span class="input-group-text">検索</span>
+          <input type="search" class="form-control" id="userSearchInput" placeholder="ユーザー名で検索" autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary" id="userSearchClear">クリア</button>
+        </div>
+
         <div class="list-group list-group-flush" id="conversationList">
           {% for entry in user_entries %}
           {% with first_thread=entry.threads|first %}
@@ -171,6 +178,8 @@
   const titleEl = document.getElementById('conversationTitle');
   const subtitleEl = document.getElementById('conversationSubtitle');
   const profileButton = document.getElementById('profileButton');
+  const userSearchInput = document.getElementById('userSearchInput');
+  const userSearchClear = document.getElementById('userSearchClear');
   let currentUrl = '';
   let selectedUserButton = null;
   let activeThreadButton = null;
@@ -712,6 +721,26 @@
         loadConversation(threadUrl, null);
       }
     }
+  }
+
+  function filterUsers() {
+    const term = userSearchInput.value.trim().toLowerCase();
+    const users = userList.querySelectorAll('.conversation-user');
+    users.forEach(user => {
+      const username = user.dataset.username.toLowerCase();
+      user.classList.toggle('d-none', term !== '' && !username.includes(term));
+    });
+  }
+
+  if (userSearchInput) {
+    userSearchInput.addEventListener('input', filterUsers);
+  }
+  if (userSearchClear) {
+    userSearchClear.addEventListener('click', () => {
+      userSearchInput.value = '';
+      filterUsers();
+      userSearchInput.focus();
+    });
   }
 
 
