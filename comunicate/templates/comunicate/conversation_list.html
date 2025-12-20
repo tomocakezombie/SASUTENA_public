@@ -53,11 +53,21 @@
             </div>
             <div class="text-end">
               {% if first_thread and first_thread.latest_time %}
-              <div class="small text-muted">{{ first_thread.latest_time|date:"n/j H:i" }}</div>
+              <div class="small text-muted">
+                {{ first_thread.latest_time|date:"n/j H:i" }}
+              </div>
               {% endif %}
-              {% if entry.unread %}
+
+              {% if entry.unread_count > 0 %}
+                <span class="badge text-bg-warning mt-1">
+                  {% comment %} {{ thread.unread_count }} {% endcomment %}
+                  {{ entry.unread_count }}
+                </span>
+              {% endif %}
+
+              {% comment %} {% if entry.unread %}
               <span class="badge text-bg-danger mt-1">新着</span>
-              {% endif %}
+              {% endif %} {% endcomment %}
             </div>
           </button>
           {% endwith %}
@@ -130,7 +140,14 @@
                   </div>
                   <div class="text-end">
                     {% if thread.latest_time %}<div class="small text-muted">{{ thread.latest_time|date:"n/j H:i" }}</div>{% endif %}
-                    {% if thread.unread %}<span class="badge text-bg-warning mt-1">新着</span>{% endif %}
+                    {% comment %} {% if thread.unread %}<span class="badge text-bg-warning mt-1">新着</span>{% endif %} {% endcomment %}
+
+                    {% if thread.unread_count > 0 %}
+                      <span class="badge text-bg-danger mt-1">
+                        {{ thread.unread_count }}
+                      </span>
+                    {% endif %}
+
                   </div>
                 </button>
                 {% endfor %}
@@ -142,7 +159,7 @@
           </section>
           <section class="flex-grow-1">
             <div class="bg-white rounded-3 h-100 p-3" id="conversationContent">
-              <p class="text-muted small mb-0">ユーザーとトークを選択するとここに表示されます。</p>
+              <p class="text-muted small mb-0">会話相手を選択するとここに表示されます。</p>
             </div>
           </section>
         </div>
@@ -279,9 +296,26 @@
       }
       button.addEventListener('click', () => {
         const threadUrl = button.dataset.threadUrl || '';
-        if (threadUrl) {
-          loadConversation(threadUrl, button);
+        if (!threadUrl)return; //{
+
+          // ★ 今選択中のユーザー名を取得
+        const username = document
+          .querySelector('.conversation-user.active')
+          ?.dataset.username;
+
+        // ★ ① スレッドの未読数を消す
+        const clearedCount = clearThreadUnread(button);
+
+        // ★ ② 左側ユーザーの未読数を減らす
+        if (username) {
+          decreaseUserUnread(username, clearedCount);
         }
+
+        // ③ ★ ヘッダー未読を減らす（ここが今まで動いてなかった）
+        decreaseHeaderUnread(clearedCount);
+
+        loadConversation(threadUrl, button);
+        //}
       });
       button.dataset.bound = 'true';
     });
@@ -709,6 +743,57 @@
     });
   }
 
+
+  function clearThreadUnread(threadButton) {
+    if (!threadButton) return 0;
+
+    const badge = threadButton.querySelector('.badge');
+    if (!badge) return 0;
+
+    const count = parseInt(badge.textContent, 10) || 0;
+    badge.remove(); // ← スレッド側の通知を消す
+    return count;
+  }
+
+  function decreaseUserUnread(username, diff) {
+    if (!diff || diff <= 0) return;
+
+    const userButton = document.querySelector(
+      `.conversation-user[data-username="${username}"]`
+    );
+    if (!userButton) return;
+
+    const badge = userButton.querySelector('.badge');
+    if (!badge) return;
+
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - diff;
+
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.remove(); // 0以下なら消す
+    }
+  }
+
+
+  function decreaseHeaderUnread(diff) {
+    if (!diff || diff <= 0) return;
+
+    const badge = document.getElementById('header-dm-badge');
+    if (!badge) return;
+
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - diff;
+
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.remove(); // 0以下なら消す
+    }
+  }
+
+
   if (userList) {
     userList.querySelectorAll('.conversation-user').forEach(button => {
       button.addEventListener('click', () => {
@@ -722,11 +807,10 @@
   attachThreadButtons();
 
   const initialUsername = card.dataset.initialUsername;
-  const initialUrl = card.dataset.initialUrl;
   if (initialUsername) {
     const initialButton = userList ? userList.querySelector('.conversation-user[data-username="' + initialUsername + '"]') : null;
     if (initialButton) {
-      selectUser(initialButton, {autoThreadUrl: initialUrl || initialButton.dataset.initialThreadUrl || ''});
+      setActiveUser(initialButton);
     }
   }
 })();
