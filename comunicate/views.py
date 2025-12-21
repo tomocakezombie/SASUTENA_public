@@ -58,14 +58,7 @@ def _conversation_queryset(current_user, counterpart, thread_item):
 @login_required
 def conversation_list(request):
     user = request.user
-    
-    # Message.objects.filter(
-    #     receive_user=user,
-    #     read_flag=False,
-    #     delete_flag=False
-    # ).update(read_flag=True)
-    
-    
+        
     allowed_users_qs = _allowed_counterparts_for(user).order_by("username")
     all_users = list(allowed_users_qs)
 
@@ -106,13 +99,11 @@ def conversation_list(request):
             conversations[key] = {
                 "counterpart": counterpart,
                 "item": msg.item,
-                # "unread": msg.receive_user == user and not msg.read_flag,
                 "unread_count": 1 if (msg.receive_user == user and not msg.read_flag) else 0,
                 "latest": msg,
             }
         else:
             if msg.receive_user == user and not msg.read_flag:
-                # conversations[key]["unread"] = True
                 conversations[key]["unread_count"] += 1
 
 
@@ -128,8 +119,17 @@ def conversation_list(request):
         or user.is_staff
         or user.is_superuser
     )
+    
+    priority_user_ids = []
+    for data in conversations.values():
+        priority_user_ids.append(data["counterpart"].pk)
+    priority_user_ids = list(dict.fromkeys(priority_user_ids))
+    user_map = {u.pk: u for u in all_users}
+    priority_users = [user_map[pk] for pk in priority_user_ids if pk in user_map]
+    rest_users = [u for u in all_users if u.pk not in priority_user_ids]
+    ordered_users = priority_users + rest_users
 
-    for counterpart in all_users:
+    for counterpart in ordered_users:
         combined_products = OrderedDict()
         for product in products_by_user.get(counterpart.pk, []):
             combined_products[product.pk] = product
@@ -139,7 +139,6 @@ def conversation_list(request):
         user_threads[counterpart.pk] = {
             "counterpart": counterpart,
             "threads": OrderedDict(),
-            # "unread": False,
             "unread_count": 0,
             "products": list(combined_products.values()),
         }
@@ -173,20 +172,13 @@ def conversation_list(request):
                 "preview_author": preview_author,
                 "preview": latest_message.message_content or "",
                 "latest_time": latest_message.send_time,
-                # "unread": data["unread"],
                 "unread_count": data["unread_count"],
             }
         else:
-            # if data["unread"]:
-            #     entry["threads"][thread_key]["unread"] = True
-            # if data["unread_count"] > 0:
             entry["threads"][thread_key]["unread_count"] += data["unread_count"]
                 
         entry["unread_count"] += data["unread_count"]
 
-
-        # if data["unread"]:
-        #     entry["unread"] = True
 
         if requested_username and counterpart.username == requested_username:
             same_item = bool(thread_item) and requested_item_id and str(thread_item.pk) == requested_item_id
@@ -213,7 +205,6 @@ def conversation_list(request):
             "preview_author": "未開始",
             "preview": "メッセージはまだありません。",
             "latest_time": None,
-            # "unread": False,
             "unread_count": 0,
         }
 
@@ -241,7 +232,6 @@ def conversation_list(request):
             "counterpart": entry["counterpart"],
             "threads": threads,
             "has_threads": bool(threads),
-            # "unread": entry["unread"],
             "unread_count": entry["unread_count"],
         }
         user_entries.append(entry_data)
@@ -266,16 +256,6 @@ def conversation_list(request):
     return render(request, "comunicate/conversation_list.html", context)
 
 
-# def _apply_read_flags(user, messages_qs):
-#     unread_ids = []
-#     for msg in messages_qs:
-#         if msg.receive_user == user and not msg.read_flag:
-#             unread_ids.append(msg.pk)
-#             msg.read_flag = True
-#     if unread_ids:
-#         Message.objects.filter(pk__in=unread_ids).update(read_flag=True)
-
-
 @login_required
 def conversation_detail(request, username, item_id=None):
     target_user = get_object_or_404(User, username=username)
@@ -293,15 +273,13 @@ def conversation_detail(request, username, item_id=None):
             raise Http404("指定された商品は会話参加者のものではありません。")
 
     messages_qs = list(_conversation_queryset(request.user, target_user, thread_item))
-    # _apply_read_flags(request.user, messages_qs)
     
     qs = Message.objects.filter(
         receive_user=request.user,
-        send_user=target_user,
-        # item=thread_item,         
+        send_user=target_user,         
         read_flag=False,
         delete_flag=False,
-    )#.update(read_flag=True)
+    )
     
     if thread_item is None:
         qs = qs.filter(item__isnull=True)
