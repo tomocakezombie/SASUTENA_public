@@ -11,4 +11,5 @@ urlpatterns = [
     path("products/<int:pk>/toggle/", views.toggle_product_visibility, name="toggle_product_visibility"),
     path("products/<int:pk>/reject/", views.reject_product, name="reject_product"),
     path("messages/", views.admin_message_monitor, name="admin_message_monitor"),
+    path("tags/", views.manage_tags, name="manage_tags"),
 ]
