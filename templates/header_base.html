@@ -50,7 +50,14 @@
                   id="navMyPageBtn" 
                   data-bs-toggle="dropdown" 
                   aria-expanded="false">
-            <i class="bi bi-person-circle fs-4"></i>
+            {% if current_user_profile and current_user_profile.icon_image %}
+              <img src="{{ current_user_profile.icon_image.url }}"
+                   alt="{{ user.username }}のアイコン"
+                   class="rounded-circle"
+                   style="width: 32px; height: 32px; object-fit: cover;">
+            {% else %}
+              <i class="bi bi-person-circle fs-4"></i>
+            {% endif %}
             <span class="d-none d-sm-inline">{{ user.username }}</span>
           </button>
 
@@ -61,9 +68,15 @@
               </a>
             </li>
             <li>
+              {% if user.role != 'admin' %}
               <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'comunicate:conversation_list' %}">
                 <i class="bi bi-chat-dots"></i><span>メッセージ</span>
               </a>
+              {% else %}
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'adminPortal:admin_message_monitor' %}">
+                <i class="bi bi-chat-dots"></i><span>メッセージ管理</span>
+              </a>
+              {% endif %}
             </li>
             <li>
               <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:settings' %}">

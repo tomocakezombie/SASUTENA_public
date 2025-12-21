@@ -49,6 +49,10 @@ def my_page(request):
 		avg=Avg("score"),
 		count=Count("id"),
 	)
+
+	if getattr(request.user, "role", "") == "admin":
+		return redirect("adminPortal:my_page")
+
 	return render(
 		request,
 		"accounts/my_profile.html",
