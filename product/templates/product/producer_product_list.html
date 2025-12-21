@@ -45,6 +45,12 @@
                                 <div class="col">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                         <h3 class="h6 mb-0 fw-bold">{{ product.item_name }}</h3>
+                                        {% if product.user %}
+                                            <a class="text-primary d-inline-flex align-items-center" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+                                                <i class="bi bi-person-circle"></i>
+                                                <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+                                            </a>
+                                        {% endif %}
                                         {% if product.valid %}
                                             <span class="badge bg-success">承認済み</span>
                                         {% else %}
@@ -114,6 +120,10 @@
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                         <h3 class="h6 mb-0 fw-bold">{{ product.item_name }}</h3>
                                         <span class="badge bg-light text-secondary">{{ product.user.username }}</span>
+                                        <a class="text-primary d-inline-flex align-items-center" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+                                            <i class="bi bi-person-circle"></i>
+                                            <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+                                        </a>
                                         {% if product.valid %}
                                             <span class="badge bg-success">承認済み</span>
                                         {% else %}
