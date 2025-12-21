@@ -19,12 +19,41 @@
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body p-0">
                         <h2 class="h6 px-4 py-3 mb-0 border-bottom">スレッド一覧</h2>
+                        <form method="get" class="px-4 py-3 border-bottom bg-body-tertiary">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label for="searchKeyword" class="form-label small mb-1">検索キーワード</label>
+                                    <input id="searchKeyword" type="text" class="form-control form-control-sm" name="q" value="{{ search_query }}" placeholder="ユーザー名・メール・商品名・本文を検索">
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center align-items-center gap-2" data-bs-toggle="collapse" data-bs-target="#advancedDateFilters" aria-expanded="{% if start_input or end_input %}true{% else %}false{% endif %}" aria-controls="advancedDateFilters">
+                                        <i class="bi bi-plus-lg"></i><span>日付フィルタを表示</span>
+                                    </button>
+                                </div>
+                                <div class="col-12 collapse{% if start_input or end_input %} show{% endif %}" id="advancedDateFilters">
+                                    <div class="row g-2">
+                                        <div class="col-12 col-sm-6">
+                                            <label for="searchStart" class="form-label small mb-1">開始日</label>
+                                            <input id="searchStart" type="date" class="form-control form-control-sm" name="start" value="{{ start_input }}">
+                                        </div>
+                                        <div class="col-12 col-sm-6">
+                                            <label for="searchEnd" class="form-label small mb-1">終了日</label>
+                                            <input id="searchEnd" type="date" class="form-control form-control-sm" name="end" value="{{ end_input }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn btn-outline-primary btn-sm" type="submit">検索</button>
+                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'adminPortal:admin_message_monitor' %}">クリア</a>
+                            </div>
+                        </form>
                         {% if threads %}
                             <div class="list-group list-group-flush">
                                 {% for thread in threads %}
                                     {% with user_a=thread.user_a user_b=thread.user_b item=thread.item latest=thread.latest_message %}
                                         <a
-                                            href="{% url 'adminPortal:admin_message_monitor' %}?u1={{ thread.key.0 }}&u2={{ thread.key.1 }}{% if thread.key.2 %}&item={{ thread.key.2 }}{% endif %}"
+                                            href="{% url 'adminPortal:admin_message_monitor' %}?u1={{ thread.key.0 }}&u2={{ thread.key.1 }}{% if thread.key.2 %}&item={{ thread.key.2 }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if start_input %}&start={{ start_input|urlencode }}{% endif %}{% if end_input %}&end={{ end_input|urlencode }}{% endif %}"
                                             class="list-group-item list-group-item-action d-flex flex-column gap-1"
                                         >
                                             <div class="d-flex justify-content-between align-items-center">

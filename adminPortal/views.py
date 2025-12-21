@@ -2,13 +2,16 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from datetime import datetime, time
+
+from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from login.models import AccountRequest
 from product.models import Product
+from accounts.models import UserEvaluation, UserProfile
 from comunicate.models import Message
 
 
@@ -20,6 +23,37 @@ def _thread_key(message):
     user_ids = sorted([message.send_user_id, message.receive_user_id])
     item_key = message.item_id or 0
     return (*user_ids, item_key)
+
+
+def _parse_date(date_text, for_start=True):
+    """Parse YYYY-MM-DD into an aware datetime at start or end of day."""
+    if not date_text:
+        return None
+    try:
+        date_obj = datetime.strptime(date_text, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    boundary = time.min if for_start else time.max
+    candidate = datetime.combine(date_obj, boundary)
+    if timezone.is_naive(candidate):
+        candidate = timezone.make_aware(candidate)
+    return candidate
+
+
+def _build_star_states(average_score):
+    """Return per-star fill state for displaying ratings."""
+    if average_score is None:
+        return []
+    avg_float = float(average_score)
+    states = []
+    for position in range(1, 6):
+        if avg_float >= position:
+            states.append("full")
+        elif avg_float >= position - 0.5:
+            states.append("half")
+        else:
+            states.append("empty")
+    return states
 
 
 @login_required
@@ -45,11 +79,33 @@ def admin_message_monitor(request):
     if not _ensure_admin(request.user):
         return redirect("login:index")
 
+    search_query = (request.GET.get("q") or "").strip()
+    start_input = request.GET.get("start") or ""
+    end_input = request.GET.get("end") or ""
+
     messages_qs = (
         Message.objects.filter(delete_flag=False)
         .select_related("send_user", "receive_user", "item")
         .order_by("-send_time")
     )
+
+    if search_query:
+        messages_qs = messages_qs.filter(
+            Q(send_user__username__icontains=search_query)
+            | Q(send_user__email__icontains=search_query)
+            | Q(receive_user__username__icontains=search_query)
+            | Q(receive_user__email__icontains=search_query)
+            | Q(message_content__icontains=search_query)
+            | Q(item__item_name__icontains=search_query)
+        )
+
+    start_dt = _parse_date(start_input, for_start=True)
+    if start_dt:
+        messages_qs = messages_qs.filter(send_time__gte=start_dt)
+
+    end_dt = _parse_date(end_input, for_start=False)
+    if end_dt:
+        messages_qs = messages_qs.filter(send_time__lte=end_dt)
 
     user_cache = {}
     threads = []
@@ -110,8 +166,14 @@ def admin_message_monitor(request):
                 else:
                     detail_filters &= Q(item__isnull=True)
 
+                thread_filters = detail_filters & Q(delete_flag=False)
+                if start_dt:
+                    thread_filters &= Q(send_time__gte=start_dt)
+                if end_dt:
+                    thread_filters &= Q(send_time__lte=end_dt)
+
                 thread_messages = (
-                    Message.objects.filter(detail_filters, delete_flag=False)
+                    Message.objects.filter(thread_filters)
                     .select_related("send_user", "receive_user", "item")
                     .order_by("send_time")
                 )
@@ -120,8 +182,43 @@ def admin_message_monitor(request):
         "threads": threads,
         "selected_thread": selected_thread,
         "thread_messages": thread_messages,
+        "search_query": search_query,
+        "start_input": start_input,
+        "end_input": end_input,
     }
     return render(request, "adminPortal/admin_message_monitor.html", context)
+
+
+@login_required
+def admin_my_page(request):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    profile, _created = UserProfile.objects.get_or_create(
+        user=request.user,
+        defaults={
+            "nick_name": request.user.username,
+            "publish_profile": True,
+            "mail_allow": True,
+        },
+    )
+
+    evaluation_stats = UserEvaluation.objects.filter(target_user_id=request.user).aggregate(
+        avg=Avg("score"),
+        count=Count("id"),
+    )
+
+    return render(
+        request,
+        "adminPortal/admin_my_profile.html",
+        {
+            "user_obj": request.user,
+            "profile": profile,
+            "rating_average": evaluation_stats["avg"],
+            "rating_count": evaluation_stats["count"],
+            "rating_stars": _build_star_states(evaluation_stats["avg"]),
+        },
+    )
 
 
 @login_required

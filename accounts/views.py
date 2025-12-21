@@ -116,6 +116,7 @@ def settings(request):
 	for field in password_form.fields.values():
 		existing_classes = field.widget.attrs.get("class", "")
 		field.widget.attrs["class"] = (existing_classes + " form-control").strip()
+		field.widget.attrs.pop("autofocus", None)
 
 	if request.method == "POST":
 		form_type = request.POST.get("form_type")

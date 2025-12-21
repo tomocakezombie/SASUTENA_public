@@ -5,6 +5,7 @@ from . import views
 app_name = "adminPortal"
 
 urlpatterns = [
+    path("my-page/", views.admin_my_page, name="my_page"),
     path("", views.admin_portal_list, name="admin_portal_list"),
     path("requests/<int:pk>/approve/", views.approve_account_request, name="approve_account_request"),
     path("products/<int:pk>/toggle/", views.toggle_product_visibility, name="toggle_product_visibility"),
