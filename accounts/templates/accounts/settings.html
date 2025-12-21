@@ -29,9 +29,38 @@
                     {% endif %}
                 </div>
                 <div>
-                    <label class="form-label small" for="id_icon_image">アイコン画像</label>
-                    {{ profile_form.icon_image }}
-                    <div class="form-text">JPG / PNG 推奨</div>
+                    <label class="form-label small" for="iconImageInput">アイコン画像</label>
+                    <div class="d-flex flex-wrap">
+                        <div class="flex-grow-1" style="min-width: 240px;">
+                            {{ profile_form.icon_image }}
+                            <div class="form-text">JPG / PNG 推奨（最大2MB程度）</div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('iconImageInput').click();">画像を変更</button>
+                        </div>
+                        <div class="position-relative ms-auto" style="width: 160px;">
+                            <label for="iconImageInput" class="d-block" style="cursor: pointer;">
+                                <div class="image-input border rounded-circle overflow-hidden position-relative" style="width: 160px; height: 160px;">
+                                    <img
+                                        src="{% if profile.icon_image %}{{ profile.icon_image.url }}{% endif %}"
+                                        alt="現在のアイコン"
+                                        class="w-100 h-100"
+                                        id="settingsIconPreview"
+                                        style="object-fit: cover; {% if not profile.icon_image %}display: none;{% endif %}"
+                                    >
+                                    <div
+                                        id="settingsIconPlaceholder"
+                                        class="w-100 h-100 d-flex align-items-center justify-content-center text-muted flex-column rounded-circle"
+                                        style="background-color: #f8f9fa; {% if profile.icon_image %}display: none;{% endif %}"
+                                    >
+                                        <i class="bi bi-image fs-1"></i>
+                                        <span class="small">クリックして選択</span>
+                                    </div>
+                                    <div class="image-input__overlay position-absolute top-0 start-0 w-100 h-100"
+                                         style="pointer-events: none; background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.4) 100%); {% if not profile.icon_image %}display: none;{% endif %}"
+                                         id="settingsIconOverlay"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                     {% if profile_form.icon_image.errors %}
                     <div class="invalid-feedback d-block">{{ profile_form.icon_image.errors.0 }}</div>
                     {% endif %}
@@ -105,4 +134,38 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("iconImageInput");
+    const previewImg = document.getElementById("settingsIconPreview");
+    const placeholder = document.getElementById("settingsIconPlaceholder");
+    const overlay = document.getElementById("settingsIconOverlay");
+
+    if (!fileInput || !previewImg || !placeholder) {
+        return;
+    }
+
+    fileInput.addEventListener("change", function () {
+        const [file] = fileInput.files || [];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            previewImg.src = event.target.result;
+            previewImg.style.display = "block";
+            placeholder.style.display = "none";
+            if (overlay) {
+                overlay.style.display = "block";
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+});
+</script>
 {% endblock %}

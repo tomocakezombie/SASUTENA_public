@@ -7,6 +7,16 @@ class userSettings(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = ["nick_name", "publish_profile", "mail_allow", "icon_image"]
+        widgets = {
+            "icon_image": forms.FileInput(
+                attrs={
+                    "class": "visually-hidden",
+                    "accept": "image/*",
+                    "id": "iconImageInput",
+                    "aria-label": "アイコン画像を選択",
+                }
+            ),
+        }
 
 
 class UserEvaluationForm(forms.ModelForm):
