@@ -39,6 +39,7 @@ urlpatterns = [
     path('dashboard/', include('dashboard.urls')),
     path('product/', include(('product.urls', 'product'), namespace='product')),
     path('messages/', include(('comunicate.urls', 'comunicate'), namespace='comunicate')),
+    path('admin-portal/', include(('adminPortal.urls', 'adminPortal'), namespace='adminPortal')),
 ]
 
 if settings.DEBUG:

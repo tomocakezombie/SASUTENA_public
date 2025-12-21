@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "product.apps.ProductConfig",
     "comunicate.apps.ComunicateConfig",
+    "adminPortal.apps.AdminportalConfig",
 ]
 
 MIDDLEWARE = [

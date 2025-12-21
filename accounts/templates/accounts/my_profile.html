@@ -9,8 +9,8 @@
 {% endblock %}
 
 {% block content %}
-<main class="py-5">
-  <div class="container">
+<main class="py-5 profile-page">
+  <div class="profile-container">
     <div class="card shadow-sm border-0">
       <div class="card-body">
         <div class="text-center mb-4">
@@ -57,26 +57,6 @@
             </button>
           </div>
         </div>
-        <!-- @削除予定 -->
-        <div class="mx-auto" style="max-width:720px;">
-          <div class="card border-0 bg-body-tertiary mb-4">
-            <div class="card-body">
-              <h2 class="h6 text-muted mb-3">「デバッグ情報」</h2>
-              <dl class="row gy-2 mb-0">
-                <dt class="col-sm-4">ユーザー名</dt>
-                <dd class="col-sm-8">{{ user_obj.username }}</dd>
-                <dt class="col-sm-4">メール</dt>
-                <dd class="col-sm-8">{{ user_obj.email|default:"未登録" }}</dd>
-                <dt class="col-sm-4">名前</dt>
-                <dd class="col-sm-8">{{ profile.name|default:"未設定" }}</dd>
-                <dt class="col-sm-4">ニックネーム</dt>
-                <dd class="col-sm-8">{{ profile.nick_name|default:"未設定" }}</dd>
-                <dt class="col-sm-4">公開設定</dt>
-                <dd class="col-sm-8">{{ profile.publish_profile|yesno:"公開,非公開" }}</dd>
-              </dl>
-            </div>
-          </div>
-
 
           <div class="card border-0 bg-body-tertiary">
             <div class="card-body">
@@ -106,10 +86,14 @@
                     <h2 class="h6 text-center mb-3">商品関連リンク</h2>
                     <div id="quickLinks" class="row g-3 justify-content-center">
                     <div class="col-12 col-md-6">
-                      {% if user_obj.role == "producer" or user_obj.role == "admin" %}
+                      {% if user_obj.role == "producer" %}
                       <a href="{% url 'product:producer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
-                      {% else %}
+                      {% elif user_obj.role == "consumer" %}
                       <a href="{% url 'product:consumer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% elif user_obj.role == "admin" %}
+                      <a href="{% url 'adminPortal:admin_portal_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% else %}
+                      <a href="#" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                       {% endif %}
                         <div class="card-body d-flex align-items-start gap-3">
                           <span class="link-icon link-icon-primary"><i class="bi bi-grid"></i></span>
@@ -122,17 +106,39 @@
                     </div>
                   
                     <div class="col-12 col-md-6">
+                      {% if user_obj.role == "admin" %}
+                      <a href="{% url 'adminPortal:admin_message_monitor' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% else %}
                       <a href="{% url 'comunicate:conversation_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                      {% endif %}
                         <div class="card-body d-flex align-items-start gap-3">
                           <span class="link-icon link-icon-success"><i class="bi bi-chat-dots"></i></span>
                           <div>
                             <div class="fw-semibold mb-1">メッセージ</div>
-                            <div class="small text-muted mb-0">ユーザーとの会話一覧を開きます。</div>
+                            {% if user_obj.role == "admin" %}
+                              <div class="small text-muted mb-0">全ユーザーの会話状況を確認します。</div>
+                            {% else %}
+                              <div class="small text-muted mb-0">ユーザーとの会話一覧を開きます。</div>
+                            {% endif %}
                           </div>
                         </div>
                       </a>
                     </div>
                   
+                    {% if user_obj.role == "admin" %}
+                    <div class="col-12 col-md-6">
+                      <a href="{% url 'product:producer_product_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                        <div class="card-body d-flex align-items-start gap-3">
+                          <span class="link-icon link-icon-info"><i class="bi bi-box-seam"></i></span>
+                          <div>
+                            <div class="fw-semibold mb-1">生産者画面を確認</div>
+                            <div class="small text-muted mb-0">公開中の商品や表示内容を確認します。</div>
+                          </div>
+                        </div>
+                      </a>
+                    </div>
+                    {% endif %}
+
                     <div class="col-12 col-md-6">
                       <a href="history.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                         <div class="card-body d-flex align-items-start gap-3">

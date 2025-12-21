@@ -27,6 +27,14 @@ class SignupForm(forms.ModelForm):
         if role_field:
             role_field.choices = [choice for choice in role_field.choices if choice[0] in {"producer", "consumer"}]
 
+        for name, field in self.fields.items():
+            widget = field.widget
+            base_class = "form-select" if isinstance(widget, forms.Select) else "form-control"
+            existing = widget.attrs.get("class", "")
+            widget.attrs["class"] = (f"{existing} {base_class}").strip()
+            if not widget.attrs.get("placeholder") and isinstance(widget, (forms.TextInput, forms.EmailInput, forms.PasswordInput)):
+                widget.attrs["placeholder"] = field.label
+
     def clean(self):
         cleaned = super().clean()
         if cleaned.get("password") != cleaned.get("confirm_password"):

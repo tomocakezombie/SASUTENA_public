@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}{% endblock %}
+
+{% block content %}
+<main class="py-4">
+    <div class="container">
+        <div class="card shadow-sm border-0 mb-4" id="mypage">
+            <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+                <div>
+                    <h1 class="h4 mb-1">管理者ダッシュボード</h1>
+                    <p class="small text-muted mb-0">利用申請と出品の承認を行います。</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'accounts:my_page' %}" class="btn btn-outline-primary">マイページを見る</a>
+                    <a href="{% url 'adminPortal:admin_message_monitor' %}" class="btn btn-outline-success">メッセージ一覧</a>
+                    <a href="{% url 'login:logout' %}" class="btn btn-outline-secondary">ログアウト</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">利用申請（簡易）</h2>
+                <button
+                    class="btn btn-sm btn-outline-secondary mb-3"
+                    type="button"
+                    aria-expanded="false"
+                    data-toggle-target="#requests"
+                    data-label-open="▼ 一覧を開く"
+                    data-label-close="▲ 一覧を閉じる"
+                >
+                    ▼ 一覧を開く
+                </button>
+                <div id="requests" class="d-flex flex-column gap-3 collapse-panel d-none">
+                    {% if account_requests %}
+                        {% for request in account_requests %}
+                            <div class="item d-flex flex-column flex-md-row gap-3 border rounded p-3">
+                                <div class="flex-grow-1">
+                                    <strong>{{ request.username }}</strong>
+                                    <div class="small text-muted">
+                                        申請ロール: {{ request.get_role_display }} ・ 状態:
+                                        {% if request.is_approved %}
+                                            <span class="badge text-bg-success">承認済</span>
+                                        {% else %}
+                                            <span class="badge text-bg-secondary">承認待ち</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="small text-muted">申請日時: {{ request.request_date|date:"Y/m/d H:i" }}</div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:profile_detail' request.username %}">詳細を見る</a>
+                                    {% if not request.is_approved %}
+                                        <form method="post" action="{% url 'adminPortal:approve_account_request' request.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success btn-sm">承認する</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="badge text-bg-success">承認済み</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">現在処理すべき利用申請はありません。</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h2 class="h5 mb-3">出品承認一覧</h2>
+                <button
+                    class="btn btn-sm btn-outline-secondary mb-3"
+                    type="button"
+                    aria-expanded="false"
+                    data-toggle-target="#items"
+                    data-label-open="▼ 一覧を開く"
+                    data-label-close="▲ 一覧を閉じる"
+                >
+                    ▼ 一覧を開く
+                </button>
+                <div id="items" class="d-flex flex-column gap-3 collapse-panel d-none">
+                    {% if products %}
+                        {% for product in products %}
+                            <div class="item d-flex flex-column flex-md-row gap-3 border rounded p-3">
+                                {% if product.item_image %}
+                                    <img src="{{ product.item_image.url }}" class="item-photo rounded" alt="{{ product.item_name }}" style="width: 96px; height: 96px; object-fit: cover;">
+                                {% else %}
+                                    <div class="item-photo rounded bg-light d-flex align-items-center justify-content-center text-muted" style="width: 96px; height: 96px;">
+                                        画像なし
+                                    </div>
+                                {% endif %}
+                                <div class="flex-grow-1">
+                                    <strong>{{ product.item_name }}</strong>
+                                    <div class="small text-muted">出品者: {{ product.user.username }}</div>
+                                    <div class="small">
+                                        承認:
+                                        {% if product.rejected_at %}
+                                            <span class="badge text-bg-danger">却下</span>
+                                        {% elif product.publish %}
+                                            <span class="badge text-bg-success">公開中</span>
+                                        {% elif product.valid %}
+                                            <span class="badge text-bg-secondary">承認済（非公開）</span>
+                                        {% else %}
+                                            <span class="badge text-bg-warning">承認待ち</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.admin_comment and product.rejected_at %}
+                                        <div class="small text-danger">理由: {{ product.admin_comment }}</div>
+                                    {% elif product.admin_comment %}
+                                        <div class="small text-muted">管理者メモ: {{ product.admin_comment }}</div>
+                                    {% endif %}
+                                    {% if product.rejected_at %}
+                                        <div class="small text-muted">却下日: {{ product.rejected_at|date:"Y年m月d日 H:i" }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex flex-column gap-2 align-items-start">
+                                    <form method="post" action="{% url 'adminPortal:toggle_product_visibility' product.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-primary btn-sm" {% if product.rejected_at %}disabled{% endif %}>
+                                            {% if product.publish %}
+                                                非公開にする
+                                            {% else %}
+                                                公開する
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    {% if product.rejected_at %}
+                                        <form method="post" action="{% url 'adminPortal:reject_product' product.pk %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="mode" value="undo">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">却下を解除</button>
+                                        </form>
+                                    {% else %}
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#rejectProductModal-{{ product.pk }}"
+                                        >
+                                            却下する
+                                        </button>
+                                    {% endif %}
+                                    <a class="link" href="{% url 'product:product_detail' product.item_id %}">詳細</a>
+                                </div>
+                            </div>
+                            {% if not product.rejected_at %}
+                                <div class="modal fade reject-modal" id="rejectProductModal-{{ product.pk }}" tabindex="-1" aria-labelledby="rejectProductModalLabel-{{ product.pk }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow">
+                                            <form method="post" action="{% url 'adminPortal:reject_product' product.pk %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="mode" value="reject">
+                                                <div class="modal-body pb-2">
+                                                    <h5 class="modal-title fw-semibold mb-3" id="rejectProductModalLabel-{{ product.pk }}">
+                                                        却下理由を入力
+                                                    </h5>
+                                                    <textarea
+                                                        id="rejectReason-{{ product.pk }}"
+                                                        name="reason"
+                                                        class="form-control"
+                                                        rows="3"
+                                                        maxlength="511"
+                                                        placeholder="却下理由を入力してください"
+                                                        required
+                                                    ></textarea>
+                                                </div>
+                                                <div class="modal-footer border-0 pt-0">
+                                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                                    <button type="submit" class="btn btn-danger">却下する</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">現在表示できる出品はありません。</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <p class="footer mt-4">管理者は承認ボタンで出品の公開/非公開を切り替えます。</p>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'js/admin_portal.js' %}"></script>
+{% endblock %}
