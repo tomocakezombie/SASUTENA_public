@@ -1,13 +1,40 @@
+import re
+
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.db.models import Q
 
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
 
+
+def _redirect_for_role_mismatch(request, allowed_roles, info_message):
+    """Redirect users whose role is not permitted for the current page."""
+    role = getattr(request.user, "role", "")
+    if role in allowed_roles:
+        return None
+    if info_message:
+        messages.info(request, info_message)
+    if role == "admin":
+        return redirect("adminPortal:admin_portal_list")
+    if role == "producer":
+        return redirect("product:producer_product_list")
+    if role == "consumer":
+        return redirect("product:consumer_product_list")
+    return redirect("login:index")
+
 @login_required
 def product_create(request):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "生産者専用のページです。",
+    )
+    if redirect_response:
+        return redirect_response
+
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
         print("フォーム送信を受け取りました")
@@ -16,6 +43,7 @@ def product_create(request):
             product = form.save(commit=False)
             product.user = request.user
             product.save()
+            form.save_m2m()
             return redirect('product:producer_product_list')
         print("フォームは無効です")
         return render(request, 'product/product_create.html', {'form': form})
@@ -30,6 +58,14 @@ def product_list(request):
 
 @login_required
 def product_delete(request, pk):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "生産者専用のページです。",
+    )
+    if redirect_response:
+        return redirect_response
+
     product = get_object_or_404(Product, pk=pk)
 
     # 自分の商品以外は削除させない
@@ -41,11 +77,100 @@ def product_delete(request, pk):
 
 @login_required
 def consumer_product_list(request):
-    products = Product.objects.filter(publish=True, valid=True, completed=False).order_by('-created_at')
-    return render(request, 'product/consumer_product_list.html', {'products': products})
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"consumer"},
+        "このページは消費者向けです。",
+    )
+    if redirect_response:
+        return redirect_response
+    base_queryset = (
+        Product.objects.filter(publish=True, valid=True, completed=False)
+        .select_related("user")
+        .prefetch_related("tags")
+    )
+
+    search_query = (request.GET.get("q") or "").strip()
+    search_tokens = [token for token in re.split(r"\s+", search_query) if token]
+    if search_tokens:
+        unique_tokens = []
+        for token in search_tokens:
+            if token not in unique_tokens:
+                unique_tokens.append(token)
+        search_tokens = unique_tokens
+
+    quantity_min = request.GET.get("quantity_min")
+    quantity_max = request.GET.get("quantity_max")
+    start_after = request.GET.get("start_after")
+    end_before = request.GET.get("end_before")
+
+    filtered_products = base_queryset
+    if search_tokens:
+        for token in search_tokens:
+            token_filter = (
+                Q(item_name__icontains=token)
+                | Q(description__icontains=token)
+                | Q(user__username__icontains=token)
+                | Q(tags__tag_name__icontains=token)
+            )
+            filtered_products = filtered_products.filter(token_filter)
+
+    if quantity_min:
+        try:
+            quantity_min_value = int(quantity_min)
+        except ValueError:
+            quantity_min_value = None
+        if quantity_min_value is not None:
+            filtered_products = filtered_products.filter(number__gte=quantity_min_value)
+
+    if quantity_max:
+        try:
+            quantity_max_value = int(quantity_max)
+        except ValueError:
+            quantity_max_value = None
+        if quantity_max_value is not None:
+            filtered_products = filtered_products.filter(number__lte=quantity_max_value)
+
+    if start_after:
+        filtered_products = filtered_products.filter(start_time__date__gte=start_after)
+
+    if end_before:
+        filtered_products = filtered_products.filter(end_time__date__lte=end_before)
+
+    products = filtered_products.distinct().order_by('-created_at')
+    filter_active = bool(
+        search_tokens
+        or quantity_min
+        or quantity_max
+        or start_after
+        or end_before
+    )
+
+    return render(
+        request,
+        'product/consumer_product_list.html',
+        {
+            'products': products,
+            'search_query': search_query,
+            'search_tokens': search_tokens,
+            'quantity_min': quantity_min or "",
+            'quantity_max': quantity_max or "",
+            'start_after': start_after or "",
+            'end_before': end_before or "",
+            'filter_active': filter_active,
+        },
+    )
 
 @login_required
 def producer_product_list(request):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "このページは生産者向けです。",
+    )
+    if redirect_response:
+        return redirect_response
+
     user = request.user
     #自分の出品商品一覧
     my_products = Product.objects.filter(user=user).order_by('-created_at')
@@ -59,6 +184,14 @@ def producer_product_list(request):
     
 @login_required
 def product_detail(request, pk):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"consumer", "producer"},
+        "商品の詳細は生産者・消費者のみ閲覧できます。",
+    )
+    if redirect_response:
+        return redirect_response
+
     product = get_object_or_404(Product, pk=pk)
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
@@ -74,6 +207,13 @@ def product_detail(request, pk):
         and product.valid
         and not product.completed
     )
+
+    if user_role == "consumer" and not product.publish:
+        messages.info(request, "非公開の商品にはアクセスできません。")
+        return redirect("product:consumer_product_list")
+    if user_role == "consumer" and not product.valid:
+        messages.info(request, "承認前の商品にはアクセスできません。")
+        return redirect("product:consumer_product_list")
 
     application_form = ProductApplicationForm() if can_apply and not user_application else None
     comment_form = ProductCommentForm()

@@ -17,6 +17,12 @@ class Product(models.Model):
     admin_comment = models.CharField(max_length=511, null=True, blank=True)
     rejected_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    tags = models.ManyToManyField(
+        "TagType",
+        through="ProductTag",
+        related_name="products",
+        blank=True,
+    )
     
     def __str__(self):
         return f"{self.item_name} (ID: {self.item_id})"
@@ -87,3 +93,41 @@ class ProductComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.user} on {self.product}"
+
+
+class TagType(models.Model):
+    tag_id = models.BigAutoField(primary_key=True)
+    tag_name = models.CharField(max_length=31, unique=True)
+    created_t = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "product_tagtype"
+        verbose_name = "タグ"
+        verbose_name_plural = "タグ"
+
+    def __str__(self):
+        return self.tag_name
+
+
+class ProductTag(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="product_tags",
+    )
+    tag = models.ForeignKey(
+        TagType,
+        on_delete=models.CASCADE,
+        related_name="product_tags",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "product_producttag"
+        unique_together = ("product", "tag")
+        verbose_name = "商品タグ付け"
+        verbose_name_plural = "商品タグ付け"
+
+    def __str__(self):
+        return f"{self.product} -> {self.tag}"

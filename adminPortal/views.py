@@ -10,9 +10,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from login.models import AccountRequest
-from product.models import Product
+from product.models import Product, TagType
 from accounts.models import UserEvaluation, UserProfile
 from comunicate.models import Message
+from .forms import TagTypeForm
 
 
 def _ensure_admin(user):
@@ -70,6 +71,31 @@ def admin_portal_list(request):
         {
             "account_requests": account_requests,
             "products": products,
+        },
+    )
+
+
+@login_required
+def manage_tags(request):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    form = TagTypeForm(request.POST or None)
+    tag_list = TagType.objects.order_by("tag_name")
+
+    if request.method == "POST":
+        if form.is_valid():
+            form.save()
+            messages.success(request, "タグを追加しました。")
+            return redirect("adminPortal:manage_tags")
+        messages.error(request, "タグを追加できませんでした。内容を確認してください。")
+
+    return render(
+        request,
+        "adminPortal/admin_manage_tags.html",
+        {
+            "form": form,
+            "tag_list": tag_list,
         },
     )
 
