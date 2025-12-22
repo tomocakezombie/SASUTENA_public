@@ -6,8 +6,37 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.db.models import Q
 
+from accounts.models import UserProfile
+
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
+
+
+def _get_profiles_map(user_ids):
+    """Return a mapping of user_id to profile for given users."""
+    if not user_ids:
+        return {}
+    profiles = UserProfile.objects.filter(user_id__in=user_ids).select_related("user")
+    return {profile.user_id: profile for profile in profiles}
+
+
+def _attach_owner_profiles(*product_iterables):
+    """Attach related user profiles to product instances for template use."""
+    all_products = []
+    for iterable in product_iterables:
+        if iterable:
+            all_products.extend(iterable)
+    if not all_products:
+        return
+
+    user_ids = {product.user_id for product in all_products}
+    if not user_ids:
+        return
+
+    profile_map = _get_profiles_map(user_ids)
+
+    for product in all_products:
+        product.owner_profile = profile_map.get(product.user_id)
 
 
 def _redirect_for_role_mismatch(request, allowed_roles, info_message):
@@ -137,7 +166,8 @@ def consumer_product_list(request):
     if end_before:
         filtered_products = filtered_products.filter(end_time__date__lte=end_before)
 
-    products = filtered_products.distinct().order_by('-created_at')
+    products = list(filtered_products.distinct().order_by('-created_at'))
+    _attach_owner_profiles(products)
     filter_active = bool(
         search_tokens
         or quantity_min
@@ -173,9 +203,11 @@ def producer_product_list(request):
 
     user = request.user
     #自分の出品商品一覧
-    my_products = Product.objects.filter(user=user).order_by('-created_at')
+    my_products = list(Product.objects.filter(user=user).order_by('-created_at'))
     #全体の出品商品一覧（承認前も含む）
-    all_products = Product.objects.all().order_by('-created_at')
+    all_products = list(Product.objects.all().order_by('-created_at'))
+
+    _attach_owner_profiles(my_products, all_products)
     
     return render(request, 'product/producer_product_list.html', {
         'my_products': my_products,
@@ -196,9 +228,23 @@ def product_detail(request, pk):
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
-    applications = product.applications.select_related('user')
-    comments = product.comments.filter(delete_flag=False).select_related('user')
-    user_application = applications.filter(user=request.user).first()
+    applications_qs = product.applications.select_related('user')
+    comments_qs = product.comments.filter(delete_flag=False).select_related('user')
+    user_application = applications_qs.filter(user=request.user).first()
+
+    applications = list(applications_qs.order_by('-apply_time'))
+    comments = list(comments_qs.order_by('-comment_time'))
+
+    related_user_ids = {product.user_id}
+    related_user_ids.update(application.user_id for application in applications)
+    related_user_ids.update(comment.user_id for comment in comments)
+    profile_map = _get_profiles_map(related_user_ids)
+
+    product.owner_profile = profile_map.get(product.user_id)
+    for application in applications:
+        application.user_profile = profile_map.get(application.user_id)
+    for comment in comments:
+        comment.user_profile = profile_map.get(comment.user_id)
 
     can_apply = (
         (user_role in consumer_roles)
@@ -254,7 +300,7 @@ def product_detail(request, pk):
     return render(request, 'product/product_detail.html', {
         'product': product,
         'is_owner': is_owner,
-        'applications': applications.order_by('-apply_time'),
+        'applications': applications,
         'show_apply_button': can_apply and user_application is None,
         'application_form': application_form,
         'user_application': user_application,

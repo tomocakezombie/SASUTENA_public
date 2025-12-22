@@ -20,6 +20,22 @@ def _ensure_admin(user):
     return getattr(user, "role", "") == "admin"
 
 
+def _attach_product_profiles(products):
+    """Attach uploader profile information for admin product views."""
+    if not products:
+        return
+
+    user_ids = {product.user_id for product in products}
+    if not user_ids:
+        return
+
+    profiles = UserProfile.objects.filter(user_id__in=user_ids).select_related("user")
+    profile_map = {profile.user_id: profile for profile in profiles}
+
+    for product in products:
+        product.owner_profile = profile_map.get(product.user_id)
+
+
 def _thread_key(message):
     user_ids = sorted([message.send_user_id, message.receive_user_id])
     item_key = message.item_id or 0
@@ -63,7 +79,8 @@ def admin_portal_list(request):
         return redirect("login:index")
 
     account_requests = AccountRequest.objects.order_by("-request_date").select_related()
-    products = Product.objects.select_related("user").order_by("-created_at")
+    products = list(Product.objects.select_related("user").order_by("-created_at"))
+    _attach_product_profiles(products)
 
     return render(
         request,

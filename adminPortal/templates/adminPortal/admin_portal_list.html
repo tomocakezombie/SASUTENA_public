@@ -96,7 +96,18 @@
                                 {% endif %}
                                 <div class="flex-grow-1">
                                     <strong>{{ product.item_name }}</strong>
-                                    <div class="small text-muted">出品者: {{ product.user.username }}</div>
+                                    <div class="small text-muted d-flex align-items-center gap-2 flex-wrap">
+                                        <span>出品者:</span>
+                                        <a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+                                            {% if product.owner_profile and product.owner_profile.icon_image %}
+                                                <img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
+                                            {% else %}
+                                                <i class="bi bi-person-circle fs-4 text-secondary"></i>
+                                            {% endif %}
+                                            <span class="fw-semibold text-muted">{{ product.user.username }}</span>
+                                            <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+                                        </a>
+                                    </div>
                                     <div class="small">
                                         承認:
                                         {% if product.rejected_at %}
