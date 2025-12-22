@@ -14,6 +14,9 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import UserEvaluationForm, userSettings
 from .models import UserEvaluation, UserProfile
 
+from product.models import ProductApplication , Product
+from django.db.models import Count
+
 
 User = get_user_model()
 
@@ -266,4 +269,83 @@ def producer_evaluation_overview(request):
 			"evaluation_history": evaluation_history,
 		},
 	)
+
+
+
+@login_required
+def history(request):
+	user = request.user
+	role = getattr(user, "role", "")
+
+	summary = {}
+	applied_list = []
+	received_list = []
+	product_list = []
+
+	if role == "consumer":
+		applied_qs = ProductApplication.objects.filter(user=user)
+		summary = {
+			"completed": applied_qs.filter(apply_status=ProductApplication.STATUS_APPROVED).count(),
+			"applied": applied_qs.count(),
+		}
+		applied_list = applied_qs.select_related("product").order_by("-apply_time")
+
+	elif role == "producer":
+		my_products = Product.objects.filter(user=user)
+		product_list = my_products.order_by("-created_at")
+
+		# 商品ごとの申し込み数
+		product_counts = (
+			ProductApplication.objects.filter(product__in=my_products)
+			.values("product")
+			.annotate(apply_count=Count("apply_id"))
+		)
+
+		# 辞書化してアクセスしやすく
+		apply_count_dict = {item["product"]: item["apply_count"] for item in product_counts}
+
+		# 商品に属性としてセット
+		for product in product_list:
+			product.apply_count = apply_count_dict.get(product.item_id, 0)
+			statuses = []
+
+			if not product.valid and product.admin_comment:
+				statuses.append("rejected")
+			if product.valid:
+				statuses.append("approved")
+			if product.apply_count > 0:
+				statuses.append("received")
+			if product.valid == False and product.admin_comment is None and product.apply_count == 0:
+				statuses.append("registered")
+
+
+			product.status = statuses
+
+
+
+
+		summary = {
+			"registered": my_products.count(),
+			"approved": my_products.filter(valid=True).count(),
+			"rejected": my_products.filter(valid=False, admin_comment__isnull=False).count(),
+			"received": sum(apply_count_dict.values()),
+		}
+
+		received_list = (
+			ProductApplication.objects.filter(product__in=my_products)
+			.select_related("product", "user")
+			.order_by("-apply_time")
+		)
+
+	return render(request, "accounts/history.html", {
+		"role": role,
+		"summary": summary,
+		"applied_list": applied_list,
+		"received_list": received_list,
+		"product_list": product_list,
+	})
+
+
+
+
 
