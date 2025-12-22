@@ -49,20 +49,23 @@
             <h2 class="h6 text-muted mb-4 text-center">現在の申込み状況</h2>
 
             {% if role == "consumer" %}
-            <div class="row text-center g-4">
-                <div class="col-6 col-md-6 summary-card" data-status="completed" style="cursor:pointer;">
+            <div class="row text-center g-3">
+                <div class="col-6 col-md-6 summary-card custom-btn" data-status="completed" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.completed|default:"0" }}</div>
-                    <div class="small text-muted">取引数</div>
+                    <div class="small">取引成立</div>
                 </div>
-                <div class="col-6 col-md-6 summary-card" data-status="applied" style="cursor:pointer;">
+                <div class="col-6 col-md-6 summary-card custom-btn" data-status="pending" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.applied|default:"0" }}</div>
-                    <div class="small text-muted">申込数</div>
+                    <div class="small">申込中</div>
                 </div>
+
             </div>
             {% endif %}
 
+
+
             {% if role == "producer" %}
-            <div class="row text-center g-3">  <!-- g-4 → g-3 で少しコンパクトに -->
+            <div class="row text-center g-3">  
                 <div class="col-6 col-md-3 summary-card custom-btn" data-status="registered" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.registered|default:"0" }}</div>
                     <div class="small">登録済み出品</div>
@@ -91,51 +94,255 @@
 
         <!-- JS：サマリークリックで下のリストをフィルター -->
         <script>
-        document.addEventListener('DOMContentLoaded', function(){
-        const cards = document.querySelectorAll('.summary-card');
-        const listItems = document.querySelectorAll('#history-list li');
-
-        cards.forEach(card => {
-            card.addEventListener('click', () => {
-            const status = card.dataset.status;
-            listItems.forEach(li => {
-                if(status === 'all' || li.dataset-status === status){
-                li.style.display = 'block';
-                } else {
-                li.style.display = 'none';
-                }
-            });
-            });
-        });
-        });
+        
         </script>
 
         <hr class="my-4">
 
-        <!-- 消費者: 取引成立商品リスト -->
+        <!-- 消費者: 取引成立・申込中商品リスト -->
         {% if role == "consumer" %}
         <section class="mx-auto mb-4" style="max-width:720px;">
-        <h2 class="h6 text-center mb-3">取引成立した商品</h2>
+            <h2 id="consumer-list-heading" class="h6 text-center mb-3">取引成立した商品</h2>
 
-        <div class="card border-0 shadow-sm">
-            <ul class="list-group list-group-flush" id="consumer-history-list">
-            {% for app in completed_list %}
-            <li class="list-group-item" data-status="completed">
-                <div class="fw-semibold">{{ app.product.item_name }}</div>
-                <div class="small text-muted">
-                {{ app.get_apply_status_display }} ／
-                {{ app.apply_time|date:"Y-m-d H:i" }}
+            <!-- 検索・ソート -->
+            <div class="d-flex flex-wrap gap-2 mb-3 justify-content-between">
+                <input type="text" id="consumer-search-input" class="form-control" placeholder="商品名で検索" style="max-width: 300px;">
+                <button class="btn btn-outline-secondary btn-sm"
+                        id="consumer-sort-button">
+                    ソート: 申込日時が古い順
+                </button>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="list-group list-group-flush" id="consumer-history-list">
+                    <!-- 取引成立 -->
+                    {% if completed_list %}
+                        {% for app in completed_list %}
+                        <article class="list-group-item py-3 px-3"
+                            data-status="{{ app.status_str }}"
+                            data-time="{{ app.apply_time|date:'Y-m-d H:i' }}">
+
+                            <div class="d-flex flex-wrap gap-3 align-items-start">
+
+                                <!-- 商品画像 -->
+                                {% if app.product.item_image %}
+                                <img src="{{ app.product.item_image.url }}"
+                                    alt="{{ app.product.item_name }}"
+                                    class="rounded"
+                                    style="width: 110px; height: 80px; object-fit: cover;">
+                                {% else %}
+                                <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted"
+                                    style="width: 110px; height: 80px;">
+                                    No Image
+                                </div>
+                                {% endif %}
+
+                                <div class="flex-fill">
+
+                                    <!-- 商品名 + 状態 -->
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <h3 class="h6 mb-0 fw-bold">{{ app.product.item_name }}</h3>
+
+                                        {% if app.apply_status == 1 %}
+                                            <span class="badge bg-success text-white">取引成立</span>
+                                        {% elif app.apply_status == 0 %}
+                                            <span class="badge bg-warning text-dark">申込中</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- 商品情報（生産者と同じ） -->
+                                    <ul class="list-unstyled mb-1 small text-muted">
+                                        <li>申込日時: {{ app.apply_time|date:"Y-m-d H:i" }}</li>
+                                        <li>数量: {{ app.quantity }}</li>
+                                        <li>
+                                            受け渡し期間:
+                                            {{ app.product.start_time|date:"Y-m-d H:i" }}
+                                            ～ {{ app.product.end_time|date:"Y-m-d H:i" }}
+                                        </li>
+                                    </ul>
+
+                                    {% if app.product.description %}
+                                    <p class="mb-1 small">説明: {{ app.product.description }}</p>
+                                    {% endif %}
+
+                                    {% if app.product.tags.exists %}
+                                    <div class="small text-muted mb-1">
+                                        タグ:
+                                        {% for tag in app.product.tags.all %}
+                                            {{ tag.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a class="btn btn-sm btn-outline-primary"
+                                        href="{% url 'product:product_detail' app.product.pk %}">
+                                            詳細を見る
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </article>
+
+                        {% endfor %}
+                    {% else %}
+                        <article class="list-group-item text-muted small text-center" data-status="completed">
+                            履歴はありません
+                        </article>
+                    {% endif %}
+
+                    <!-- 申込み中 -->
+                    {% if pending_list %}
+                        {% for app in pending_list %}
+                        <article class="list-group-item py-3 px-3"
+                            data-status="{{ app.status_str }}"
+                            data-time="{{ app.apply_time|date:'Y-m-d H:i' }}">
+
+                            <div class="d-flex flex-wrap gap-3 align-items-start">
+
+                                <!-- 商品画像 -->
+                                {% if app.product.item_image %}
+                                <img src="{{ app.product.item_image.url }}"
+                                    alt="{{ app.product.item_name }}"
+                                    class="rounded"
+                                    style="width: 110px; height: 80px; object-fit: cover;">
+                                {% else %}
+                                <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted"
+                                    style="width: 110px; height: 80px;">
+                                    No Image
+                                </div>
+                                {% endif %}
+
+                                <div class="flex-fill">
+
+                                    <!-- 商品名 + 状態 -->
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <h3 class="h6 mb-0 fw-bold">{{ app.product.item_name }}</h3>
+
+                                        {% if app.apply_status == 1 %}
+                                            <span class="badge bg-success text-white">取引成立</span>
+                                        {% elif app.apply_status == 0 %}
+                                            <span class="badge bg-warning text-dark">申込中</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- 商品情報（生産者と同じ） -->
+                                    <ul class="list-unstyled mb-1 small text-muted">
+                                        <li>申込日時: {{ app.apply_time|date:"Y-m-d H:i" }}</li>
+                                        <li>数量: {{ app.quantity }}</li>
+                                        <li>
+                                            受け渡し期間:
+                                            {{ app.product.start_time|date:"Y-m-d H:i" }}
+                                            ～ {{ app.product.end_time|date:"Y-m-d H:i" }}
+                                        </li>
+                                    </ul>
+
+                                    {% if app.product.description %}
+                                    <p class="mb-1 small">説明: {{ app.product.description }}</p>
+                                    {% endif %}
+
+                                    {% if app.product.tags.exists %}
+                                    <div class="small text-muted mb-1">
+                                        タグ:
+                                        {% for tag in app.product.tags.all %}
+                                            {{ tag.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a class="btn btn-sm btn-outline-primary"
+                                        href="{% url 'product:product_detail' app.product.pk %}">
+                                            詳細を見る
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </article>
+
+                        {% endfor %}
+                    {% else %}
+                        <article class="list-group-item text-muted small text-center">
+                            申込み中の商品はありません
+                        </article>
+                    {% endif %}
+
                 </div>
-            </li>
-            {% empty %}
-            <li class="list-group-item text-muted small text-center">
-                履歴はありません
-            </li>
-            {% endfor %}
-            </ul>
-        </div>
+            </div>
         </section>
+
+
+        <!-- JS：消費者リスト検索・ステータスフィルター -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.summary-card');
+            const consumerItems = document.querySelectorAll('#consumer-history-list article');
+            const searchInput = document.getElementById('consumer-search-input');
+            const heading = document.querySelector('#consumer-list-heading');
+
+            let currentStatus = 'completed';
+
+           function applyFilters() {
+                const query = searchInput.value.toLowerCase();
+
+                consumerItems.forEach(item => {
+                    const titleEl = item.querySelector('h3');
+
+                    if (!titleEl) {
+                        item.style.display = 'none';
+                        return;
+                    }
+                    const name = item.querySelector('h3').textContent.toLowerCase();
+                    const matchStatus = item.dataset.status === currentStatus;
+                    const matchQuery = name.includes(query);
+
+                    item.style.display = (matchStatus && matchQuery) ? 'flex' : 'none';
+                });
+
+                heading.textContent =
+                    currentStatus === 'completed' ? '取引成立した商品' : '申込中の商品';
+            }
+
+            // 初期表示
+            applyFilters();
+
+
+            // 🔹 サマリーカードクリック時
+            cards.forEach(card => {
+                card.addEventListener('click', () => {
+                    currentStatus = card.dataset.status;
+                    applyFilters();
+                });
+            });
+
+            searchInput.addEventListener('input', applyFilters);
+
+            const sortButton = document.getElementById('consumer-sort-button');
+            const historyList = document.getElementById('consumer-history-list');
+
+            let sortAsc = true; // true: 古い順 / false: 新しい順
+
+            sortButton.addEventListener('click', () => {
+                const items = Array.from(historyList.querySelectorAll('article'));
+
+                items.sort((a, b) => {
+                    const dateA = new Date(a.dataset.time);
+                    const dateB = new Date(b.dataset.time);
+                    return sortAsc ? dateA - dateB : dateB - dateA;
+                });
+
+                items.forEach(item => historyList.appendChild(item));
+
+                sortAsc = !sortAsc;
+                sortButton.textContent =
+                    `申込日時が${sortAsc ? '古い順に並び替える' : '新しい順に並び替える'}`;
+            });
+        });
+        </script>
         {% endif %}
+
 
         <!-- 生産者: 出品商品リスト -->
         {% if role == "producer" %}
@@ -234,43 +441,102 @@
 
         <!-- 検索・ソート用JS -->
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const cards = document.querySelectorAll('.summary-card');
             const producerItems = document.querySelectorAll('#producer-history-list article');
+            const heading = document.getElementById('producer-list-heading');
+            const searchInput = document.getElementById('search-input');
+            const historyList = document.getElementById('producer-history-list');
+            const sortButton = document.getElementById('sort-button');
 
-            const heading = document.querySelector('#producer-list-heading');
+            if (!historyList || !searchInput) return;
 
+            let currentStatus = 'registered'; // 初期状態
+            let sortByStart = true;
+
+            /* =========================
+            フィルタ本体
+            ========================= */
+            function applyFilters() {
+                const query = searchInput.value.toLowerCase();
+
+                producerItems.forEach(item => {
+                    const titleEl = item.querySelector('h3');
+                    if (!titleEl) {
+                        item.style.display = 'none';
+                        return;
+                    }
+
+                    const name = titleEl.textContent.toLowerCase();
+                    const statuses = item.dataset.status.split(',');
+
+                    const matchStatus =
+                        currentStatus === 'registered'
+                            ? true
+                            : statuses.includes(currentStatus);
+
+                    const matchQuery = name.includes(query);
+
+                    item.style.display =
+                        matchStatus && matchQuery ? 'flex' : 'none';
+                });
+
+                // 見出し更新
+                const headingMap = {
+                    registered: '登録済み商品',
+                    approved: '承認済み商品',
+                    rejected: '却下された商品',
+                    received: '受注・申込み商品',
+                };
+                heading.textContent = headingMap[currentStatus] || '登録済み商品';
+            }
+
+            /* =========================
+            初期表示
+            ========================= */
+            applyFilters();
+
+            /* =========================
+            ステータス切替
+            ========================= */
             cards.forEach(card => {
                 card.addEventListener('click', () => {
-                    const status = card.dataset.status;
-
-                    producerItems.forEach(item => {
-                        const statuses = item.dataset.status.split(',');
-                        if(status === 'registered'){
-                            item.style.display = 'flex';
-                        }
-                        // それ以外はステータスに含まれるものだけ表示
-                        else if(status === 'all' || statuses.includes(status)){
-                            item.style.display = 'flex';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-
-                    // 見出し更新
-                    let headingText = '';
-                    switch(status){
-                        case 'registered': headingText = '登録済み商品'; break;
-                        case 'approved': headingText = '承認済み商品'; break;
-                        case 'rejected': headingText = '却下された商品'; break;
-                        case 'received': headingText = '受注・申込み商品'; break;
-                        default: headingText = '登録済み商品';
-                    }
-                    heading.textContent = headingText;
+                    currentStatus = card.dataset.status;
+                    applyFilters();
                 });
+            });
+
+            /* =========================
+            検索
+            ========================= */
+            searchInput.addEventListener('input', applyFilters);
+
+            /* =========================
+            ソート
+            ========================= */
+            if (!sortButton) return;
+
+            sortButton.addEventListener('click', () => {
+                const items = Array.from(historyList.querySelectorAll('article'));
+                const attr = sortByStart ? 'start' : 'end';
+
+                items.sort((a, b) => {
+                    const dateA = new Date(a.dataset[attr]);
+                    const dateB = new Date(b.dataset[attr]);
+                    return dateA - dateB;
+                });
+
+                items.forEach(item => historyList.appendChild(item));
+
+                sortByStart = !sortByStart;
+                sortButton.textContent =
+                    sortByStart
+                        ? '受け渡し開始日順に並び変える'
+                        : '受け渡し終了日順に並び替える';
             });
         });
         </script>
+
 
 
 

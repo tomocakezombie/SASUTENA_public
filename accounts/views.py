@@ -279,16 +279,36 @@ def history(request):
 
 	summary = {}
 	applied_list = []
+	completed_list = []
 	received_list = []
 	product_list = []
-
+	pending_list = []
+ 
+	# views.py で追加
+	STATUS_DISPLAY = {
+		ProductApplication.STATUS_PENDING: "pending",
+		ProductApplication.STATUS_APPROVED: "completed",
+		ProductApplication.STATUS_DECLINED: "declined",
+		ProductApplication.STATUS_CANCELLED: "cancelled",
+	}
+ 
 	if role == "consumer":
-		applied_qs = ProductApplication.objects.filter(user=user)
+		applied_qs = ProductApplication.objects.filter(user=user).select_related("product")
+		completed_list = applied_qs.filter(apply_status=ProductApplication.STATUS_APPROVED).order_by("-apply_time")
+		applied_list = applied_qs.order_by("-apply_time")
+		pending_list = applied_qs.filter(apply_status=ProductApplication.STATUS_PENDING).order_by("-apply_time")
+  
+			# ループで追加
+		for app in completed_list:
+			app.status_str = STATUS_DISPLAY[app.apply_status]
+
+		for app in pending_list:
+			app.status_str = STATUS_DISPLAY[app.apply_status]
+
 		summary = {
-			"completed": applied_qs.filter(apply_status=ProductApplication.STATUS_APPROVED).count(),
-			"applied": applied_qs.count(),
+			"completed": completed_list.count(),
+			"applied": applied_list.count(),
 		}
-		applied_list = applied_qs.select_related("product").order_by("-apply_time")
 
 	elif role == "producer":
 		my_products = Product.objects.filter(user=user)
@@ -341,6 +361,8 @@ def history(request):
 		"role": role,
 		"summary": summary,
 		"applied_list": applied_list,
+		"completed_list": completed_list,
+    	"pending_list": pending_list, 
 		"received_list": received_list,
 		"product_list": product_list,
 	})
