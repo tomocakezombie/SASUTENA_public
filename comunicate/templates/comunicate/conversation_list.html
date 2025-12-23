@@ -810,11 +810,18 @@
   attachSearchToggle();
   attachThreadButtons();
 
-  const initialUsername = card.dataset.initialUsername;
+  const initialUsername = card ? card.dataset.initialUsername : '';
+  const initialUrl = card ? card.dataset.initialUrl : '';
   if (initialUsername) {
-    const initialButton = userList ? userList.querySelector('.conversation-user[data-username="' + initialUsername + '"]') : null;
+    const selector = '.conversation-user[data-username="' + initialUsername + '"]';
+    const initialButton = userList ? userList.querySelector(selector) : null;
     if (initialButton) {
-      setActiveUser(initialButton);
+      selectUser(initialButton, {autoThreadUrl: initialUrl});
+    }
+  } else if (initialUrl && userList) {
+    const firstButton = userList.querySelector('.conversation-user');
+    if (firstButton) {
+      selectUser(firstButton, {autoThreadUrl: initialUrl});
     }
   }
 })();

@@ -136,7 +136,7 @@
 									<div class="d-flex flex-wrap align-items-center gap-2">
 										<span class="fw-semibold">
 											{% if is_owner %}
-												<a href="{% url 'accounts:profile_detail' application.user.username %}" class="text-decoration-none">
+												<a href="{% url 'comunicate:conversation_list' %}?user={{ application.user.username|urlencode }}&amp;item={{ product.pk }}">
 													{{ application.user.username }}
 												</a>
 											{% elif application.user == user %}
