@@ -85,11 +85,24 @@
                                     {% if product.admin_comment %}
                                         <p class="mb-2 small text-danger">コメント: {{ product.admin_comment }}</p>
                                     {% endif %}
-                                    <div class="d-flex flex-wrap gap-2">
-                                    {% comment %} 詳細ページ実装時にリンク先を差し替え {% endcomment %}
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
                                         <a class="btn btn-sm btn-outline-primary" href="{% url 'product:product_detail' product.pk %}">詳細を見る</a>
                                         <a class="btn btn-sm btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
+                                        {% if not product.completed and product.valid and product.publish %}
+                                            <form method="post" action="{% url 'product:product_complete' product.pk %}" class="d-inline" onsubmit="return confirm('取引完了を通知します。よろしいですか？');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success">取引完了を通知</button>
+                                            </form>
+                                        {% endif %}
                                     </div>
+                                    {% if product.completed %}
+                                        <div class="mt-3 d-flex align-items-center gap-3">
+                                            <span class="btn btn-sm btn-success disabled mb-0">完了通知済み</span>
+                                            {% if product.completed_notified_at %}
+                                                <span class="small text-muted">{{ product.completed_notified_at|date:'Y/m/d H:i' }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </article>
