@@ -55,18 +55,25 @@
 								<h2 class="h4 mb-2">{{ product.item_name }}</h2>
 								<div class="text-muted small d-flex align-items-center gap-2">
 									{% if product.user != user %}
-										<a class="text-primary d-inline-flex align-items-center justify-content-center border border-primary rounded" style="width: 32px; height: 32px;" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
-											<i class="bi bi-person-circle"></i>
+										<a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+											{% if product.owner_profile and product.owner_profile.icon_image %}
+												<img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
+											{% else %}
+												<i class="bi bi-person-circle fs-4 text-secondary"></i>
+											{% endif %}
+											<span class="fw-semibold">{{ product.user.username }}</span>
 											<span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
 										</a>
+									{% else %}
+										<div class="d-inline-flex align-items-center gap-2">
+											{% if product.owner_profile and product.owner_profile.icon_image %}
+												<img src="{{ product.owner_profile.icon_image.url }}" alt="あなたのアイコン" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
+											{% else %}
+												<i class="bi bi-person-circle fs-4 text-secondary"></i>
+											{% endif %}
+											<span class="fw-semibold">あなた</span>
+										</div>
 									{% endif %}
-									<span class="fw-semibold">
-										{% if product.user == user %}
-											あなた
-										{% else %}
-											{{ product.user.username }}
-										{% endif %}
-									</span>
 									{% if product.created_at %}
 										<span class="ms-2">{{ product.created_at|date:'Y/m/d' }}</span>
 									{% endif %}
@@ -129,22 +136,40 @@
 					{% for application in applications %}
 						<li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
 							<div class="d-flex align-items-start gap-3">
-								<span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-									<span class="fw-semibold">{{ application.user.username|first|default:"?" }}</span>
-								</span>
+								{% if is_owner %}
+									<a class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;" href="{% url 'accounts:profile_detail' application.user.username %}" title="{{ application.user.username }} のマイページ">
+										{% if application.user_profile and application.user_profile.icon_image %}
+											<img src="{{ application.user_profile.icon_image.url }}" alt="{{ application.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
+										{% else %}
+											<i class="bi bi-person-circle fs-3 text-secondary"></i>
+										{% endif %}
+										<span class="visually-hidden">{{ application.user.username }} のマイページへ</span>
+									</a>
+								{% else %}
+									<div class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;">
+										{% if application.user_profile and application.user_profile.icon_image %}
+											<img src="{{ application.user_profile.icon_image.url }}" alt="{{ application.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
+										{% else %}
+											<i class="bi bi-person-circle fs-3 text-secondary"></i>
+										{% endif %}
+									</div>
+								{% endif %}
 								<div class="flex-grow-1">
 									<div class="d-flex flex-wrap align-items-center gap-2">
-										<span class="fw-semibold">
-											{% if is_owner %}
-												<a href="{% url 'comunicate:conversation_list' %}?user={{ application.user.username|urlencode }}&amp;item={{ product.pk }}">
+										{% if is_owner %}
+											<a class="fw-semibold text-decoration-none"
+											   href="{% url 'comunicate:conversation_list' %}?user={{ application.user.username|urlencode }}&amp;item={{ product.pk }}">
+											{{ application.user.username }}
+											</a>
+										{% else %}
+											<span class="fw-semibold">
+												{% if application.user == user %}
+													あなた
+												{% else %}
 													{{ application.user.username }}
-												</a>
-											{% elif application.user == user %}
-												あなた
-											{% else %}
-												{{ application.user.username }}
-											{% endif %}
-										</span>
+												{% endif %}
+											</span>	
+										{% endif %}
 										<span class="text-muted small">{{ application.apply_time|date:'Y/m/d H:i' }}</span>
 									</div>
 									<div class="text-muted small mt-1">{{ application.message|default:"受け取り希望は未入力です。" }}</div>
@@ -167,9 +192,24 @@
 					{% for comment in comments %}
 						<li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
 							<div class="d-flex align-items-start gap-3">
-								<span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-									<span class="fw-semibold">{{ comment.user.username|first|default:"?" }}</span>
-								</span>
+								{% if comment.user != user %}
+									<a class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;" href="{% url 'accounts:profile_detail' comment.user.username %}" title="{{ comment.user.username }} のマイページ">
+										{% if comment.user_profile and comment.user_profile.icon_image %}
+											<img src="{{ comment.user_profile.icon_image.url }}" alt="{{ comment.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
+										{% else %}
+											<i class="bi bi-person-circle fs-3 text-secondary"></i>
+										{% endif %}
+										<span class="visually-hidden">{{ comment.user.username }} のマイページへ</span>
+									</a>
+								{% else %}
+									<div class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;">
+										{% if comment.user_profile and comment.user_profile.icon_image %}
+											<img src="{{ comment.user_profile.icon_image.url }}" alt="あなたのアイコン" style="width: 100%; height: 100%; object-fit: cover;">
+										{% else %}
+											<i class="bi bi-person-circle fs-3 text-secondary"></i>
+										{% endif %}
+									</div>
+								{% endif %}
 								<div class="flex-grow-1">
 									<div class="comment-bubble p-3{% if comment.user == user %} comment-bubble-self{% endif %}">
 										<div class="d-flex justify-content-between align-items-start gap-2">
@@ -178,7 +218,7 @@
 													{% if comment.user == user %}
 														あなた
 													{% else %}
-														{{ comment.user.username }}
+														<a href="{% url 'accounts:profile_detail' comment.user.username %}" class="text-decoration-none text-muted small fw-semibold">{{ comment.user.username }}</a>
 													{% endif %}
 												</span>
 												<span class="text-muted small">{{ comment.comment_time|date:'Y/m/d H:i' }}</span>
