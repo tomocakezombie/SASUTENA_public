@@ -12,4 +12,5 @@ urlpatterns = [
     path('comment/<int:comment_id>/update/', views.product_comment_update, name='comment_update'),
     path('comment/<int:comment_id>/delete/', views.product_comment_delete, name='comment_delete'),
     path('<int:pk>/', views.product_detail, name='product_detail'),  # Assuming you have a product_detail view
+    path('product/<int:pk>/toggle_notice/', views.toggle_expiration_notice, name='toggle_expiration_notice'),
 ]

@@ -2,6 +2,8 @@ from django import forms
 
 from product.models import TagType
 
+from .models import ExpirationNoticeSetting
+
 
 class TagTypeForm(forms.ModelForm):
     class Meta:
@@ -32,3 +34,21 @@ class TagTypeForm(forms.ModelForm):
         if existing.exists():
             raise forms.ValidationError("同じ名前のタグが既に存在します。")
         return name
+
+class ExpirationNoticeSettingForm(forms.ModelForm):
+    class Meta:
+        model = ExpirationNoticeSetting
+        fields = ['message', 'bg_color', 'text_color', 'is_active', 'notify_days_before']
+        labels = {
+            "message": "通知メッセージ",
+            "bg_color": "背景色(下の四角を押して色を選択してください）",
+            "text_color": "文字色(下の四角を押して色を選択してください）",
+            "is_active": "通知を有効にする",
+            'notify_days_before': "締め切り何日前に通知するか"
+        }
+        widgets = {
+            "message": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "例：この商品はもうすぐ締め切りです。"}),
+            "bg_color": forms.TextInput(attrs={"type": "color", "class": "form-control form-control-color"}),
+            "text_color": forms.TextInput(attrs={"type": "color", "class": "form-control form-control-color"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
