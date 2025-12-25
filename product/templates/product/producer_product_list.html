@@ -3,6 +3,12 @@
 {% block title %}出品管理{% endblock %}
 
 {% block content %}
+<style>
+    .product-list-scroll {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+</style>
 <section class="py-4">
     {% if expiring_products %}
     <div id="expiration-banner" class="alert py-2 px-3 mb-3" style="overflow:hidden; white-space:nowrap; background-color: {{ expiration_notice.bg_color }}; color: {{ expiration_notice.text_color }};">
@@ -42,9 +48,9 @@
                 <span class="text-muted small">全 {{ my_products|length }} 件</span>
             </div>
         </div>
-        <div class="card-body p-0">
-            {% if my_products %}
-                <div class="list-group list-group-flush">
+                <div class="card-body p-0">
+                    {% if my_products %}
+                        <div class="list-group list-group-flush product-list-scroll">
                     {% for product in my_products %}
                         <article class="list-group-item py-4 px-3">
                             <div class="row g-3 align-items-start">
@@ -139,7 +145,7 @@
         </div>
         <div class="card-body p-0">
             {% if all_products %}
-                <div class="list-group list-group-flush">
+                <div class="list-group list-group-flush product-list-scroll">
                     {% for product in all_products %}
                         <article class="list-group-item py-4 px-3">
                             <div class="row g-3 align-items-start">
