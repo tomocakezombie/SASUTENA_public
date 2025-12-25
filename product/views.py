@@ -12,6 +12,10 @@ from accounts.models import UserProfile
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
 
+from django.utils import timezone
+from datetime import timedelta
+
+from adminPortal.models import ExpirationNoticeSetting
 
 def _get_profiles_map(user_ids):
     """Return a mapping of user_id to profile for given users."""
@@ -205,6 +209,17 @@ def consumer_product_list(request):
         or end_before
     )
 
+    expiring_products = get_expiring_products()
+    
+    notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
+    if notice:
+        now = timezone.now()
+    
+        for product in expiring_products:
+            product.notice_message = notice.message \
+                .replace("{{user}}", product.user.username) \
+                .replace("{{item}}", product.item_name)
+                
     return render(
         request,
         'product/consumer_product_list.html',
@@ -217,6 +232,8 @@ def consumer_product_list(request):
             'start_after': start_after or "",
             'end_before': end_before or "",
             'filter_active': filter_active,
+            'expiring_products': expiring_products,
+            'expiration_notice': notice,
         },
     )
 
@@ -238,9 +255,21 @@ def producer_product_list(request):
 
     _attach_owner_profiles(my_products, all_products)
     
+    expiring_products = get_expiring_products()
+    notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
+    if notice:
+        now = timezone.now()
+            
+        for product in expiring_products:
+            product.notice_message = notice.message \
+                .replace("{{user}}", product.user.username) \
+                .replace("{{item}}", product.item_name)
+        
     return render(request, 'product/producer_product_list.html', {
         'my_products': my_products,
         'all_products': all_products,
+        'expiring_products': expiring_products,
+        'expiration_notice': notice,
     })
     
 @login_required
@@ -372,3 +401,31 @@ def product_comment_delete(request, comment_id):
     comment.save(update_fields=['delete_flag'])
     messages.success(request, 'コメントを削除しました。')
     return redirect('product:product_detail', pk=comment.product.pk)
+
+
+def get_expiring_products():
+    now = timezone.now()
+
+    notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
+    days_before = notice.notify_days_before if notice else 1
+
+    limit = now + timedelta(days=days_before)
+
+    return Product.objects.filter(
+        end_time__gte=now,
+        end_time__lte=limit,
+        show_expiration_notice=True,
+        completed=False,
+        publish=True,
+        valid=True,
+    ).select_related("user")
+
+
+@login_required
+def toggle_expiration_notice(request, pk):
+    product = get_object_or_404(Product, pk=pk, user=request.user)
+    if request.method == "POST":
+        product.show_expiration_notice = not product.show_expiration_notice
+        product.save()
+    return redirect("product:product_detail", pk=pk)
+

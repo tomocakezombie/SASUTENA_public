@@ -1,0 +1,72 @@
+{% extends "adminPortal/admin_portal_list.html" %}
+
+{% block content %}
+<h1>締め切り間近通知設定</h1>
+<form method="post" class="needs-validation" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+        {{ form.message.label_tag }} {{ form.message }}
+        <small class="text-muted">
+            通知として表示される文章です。<br>
+            以下のプレースホルダーが使用可能です：<br>
+            {% verbatim %}
+            {{user}} : 商品の出品者のユーザー名に置換されます。<br>
+            {{item}} : 商品名に置換されます。<br>
+            {% endverbatim %}
+            {% verbatim %}
+            例: {{user}}さんが出品した{{item}}の受け渡し期間が間もなく終了します！お早めに！！<br>
+            このように入力した場合，<br>adminさんが出品したなすの受け渡し期間が間もなく終了します！お早めに！！<br>
+            このように出力されます。<br>
+            {% endverbatim %}
+        </small>
+    </div>
+
+
+    <div class="mb-3">
+        <label>プレビュー（テスト用）:</label>
+        <div id="preview-notice" class="alert py-2 px-3" style="margin-top:5px;">
+            ここに {{user}} と {{item}} を置換した例文が表示されます
+        </div>
+    </div>
+
+    <div class="mb-3">
+        {{ form.bg_color.label_tag }} {{ form.bg_color }}
+        <small class="text-muted">通知バーの背景色を選択してください。</small>
+    </div>
+    <div class="mb-3">
+        {{ form.text_color.label_tag }} {{ form.text_color }}
+        <small class="text-muted">通知バーの文字色を選択してください。</small>
+    </div>
+    <div class="form-check mb-3">
+        {{ form.is_active }} {{ form.is_active.label_tag }}
+        <small class="text-muted"><br>チェックを入れるとマルキ通知が表示されます。<br>非表示にしたい場合はチェックを外してください</small>
+    </div>
+    <div class="mb-3">
+        {{ form.notify_days_before.label_tag }} {{ form.notify_days_before }}
+        <small class="text-muted">締め切り何日前に通知するかを設定します。</small>
+    </div>
+    <button type="submit" class="btn btn-primary">保存</button>
+</form>
+
+<script>
+    const messageInput = document.querySelector('#id_message');
+    const bgColorInput = document.querySelector('#id_bg_color');
+    const textColorInput = document.querySelector('#id_text_color');
+    const previewDiv = document.getElementById('preview-notice');
+
+    function updatePreview() {
+        previewDiv.textContent =  messageInput.value;
+        previewDiv.style.backgroundColor = bgColorInput.value;
+        previewDiv.style.color = textColorInput.value;
+    }
+
+    messageInput.addEventListener('input', updatePreview);
+    bgColorInput.addEventListener('input', updatePreview);
+    textColorInput.addEventListener('input', updatePreview);
+
+    // 初期表示
+    updatePreview();
+</script>
+
+{% endblock %}

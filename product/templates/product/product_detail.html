@@ -88,6 +88,24 @@
 								<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applicationModal">申込み</button>
 							{% endif %}
 						</div>
+
+						{% if user == product.user %}
+						<div class="form-check mb-3">
+							<form method="post" action="{% url 'product:toggle_expiration_notice' product.pk %}">
+								{% csrf_token %}
+								<input type="hidden" name="toggle" value="1">
+								<button type="submit" class="btn btn-outline-secondary btn-sm">
+									{% if product.show_expiration_notice %}
+										締め切り通知を非表示にする
+									{% else %}
+										締め切り通知を表示する
+									{% endif %}
+								</button>
+							</form>
+						</div>
+						{% endif %}
+
+
 					</div>
 
 					<p class="text-muted mb-4">{{ product.description|default:"商品説明は登録されていません。" }}</p>

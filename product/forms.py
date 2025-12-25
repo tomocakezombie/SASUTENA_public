@@ -37,7 +37,13 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ["item_name", "number", "description", "item_image", "tags"]
+        fields = ["item_name", "number", "description", "item_image", "tags", "show_expiration_notice"]
+        widgets = {
+            "show_expiration_notice": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "show_expiration_notice": "締め切り間近通知に表示する",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

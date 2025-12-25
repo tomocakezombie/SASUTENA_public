@@ -4,6 +4,19 @@
 
 {% block content %}
 <section class="py-4">
+    {% if expiring_products %}
+    <div id="expiration-banner" class="alert py-2 px-3 mb-3" style="overflow:hidden; white-space:nowrap; background-color: {{ expiration_notice.bg_color }}; color: {{ expiration_notice.text_color }};">
+        <div id="expiring-content" style="display:inline-block; white-space:nowrap;">
+            {% for product in expiring_products %}
+                <span class="expiring-item" style="margin-right:50px;">
+                    {{ product.notice_message }}
+                </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+
     <div class="card border-0 shadow-sm mb-5">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
@@ -190,4 +203,37 @@
         </div>
     </div>
 </section>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	const banner = document.getElementById('expiration-banner');
+    const content = document.getElementById('expiring-content');
+
+    if (!banner || !content) return;
+
+    let scrollSpeed =1.5; // スクロール速度を調整可能
+    let contentWidth = content.offsetWidth;
+
+    content.style.transform = `translateX(${banner.offsetWidth}px)`;
+
+    function scroll() {
+        const currentTransform = parseFloat(content.style.transform.replace('translateX(', '').replace('px)', ''));
+        const newTransform = currentTransform - scrollSpeed;
+
+        if (newTransform + contentWidth <= 0) {
+            content.style.transform = `translateX(${banner.offsetWidth}px)`; 
+        } else {
+            content.style.transform = `translateX(${newTransform}px)`; 
+        }
+
+        requestAnimationFrame(scroll);
+    }
+
+    scroll();
+});
+</script>
+
+
 {% endblock %}

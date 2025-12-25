@@ -15,6 +15,9 @@ from accounts.models import UserEvaluation, UserProfile
 from comunicate.models import Message
 from .forms import TagTypeForm
 
+from .models import ExpirationNoticeSetting
+from .forms import ExpirationNoticeSettingForm
+
 
 def _ensure_admin(user):
     return getattr(user, "role", "") == "admin"
@@ -353,3 +356,19 @@ def reject_product(request, pk):
 
     messages.success(request, f"{product.item_name} を却下しました。")
     return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+def manage_expiration_notice(request):
+    notice = ExpirationNoticeSetting.objects.first()
+
+    if request.method == "POST":
+        form = ExpirationNoticeSettingForm(request.POST, instance=notice)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "通知設定を保存しました。")
+            return redirect('adminPortal:admin_portal_list')
+    else:
+        form = ExpirationNoticeSettingForm(instance=notice)
+
+    return render(request, 'adminPortal/admin_manage_expiration_notice.html', {'form': form})
