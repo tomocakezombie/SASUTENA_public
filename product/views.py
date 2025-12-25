@@ -44,6 +44,24 @@ def _attach_owner_profiles(*product_iterables):
     for product in all_products:
         product.owner_profile = profile_map.get(product.user_id)
 
+def _attach_user_profiles(*iterables):
+    all_objects = []
+    for iterable in iterables:
+        if iterable:
+            all_objects.extend(iterable)
+    if not all_objects:
+        return
+
+    user_ids = {obj.user_id for obj in all_objects}
+    if not user_ids:
+        return
+
+    profile_map = _get_profiles_map(user_ids)
+
+    for obj in all_objects:
+        obj.user_profile = profile_map.get(obj.user_id)
+
+
 
 def _redirect_for_role_mismatch(request, allowed_roles, info_message):
     """Redirect users whose role is not permitted for the current page."""
@@ -211,15 +229,26 @@ def consumer_product_list(request):
     )
 
     expiring_products = get_expiring_products()
+    _attach_owner_profiles(expiring_products)
     
     notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
     if notice:
         now = timezone.now()
     
         for product in expiring_products:
-            product.notice_message = notice.message \
-                .replace("{{user}}", product.user.username) \
+            profile = getattr(product, "owner_profile", None)
+
+            if profile and profile.nick_name:
+                user_display = f"{profile.nick_name}（{product.user.username}）"
+            else:
+                user_display = product.user.username
+
+            product.notice_message = (
+                notice.message
+                .replace("{{user}}", user_display)
                 .replace("{{item}}", product.item_name)
+            )
+
                 
     return render(
         request,
@@ -257,14 +286,25 @@ def producer_product_list(request):
     _attach_owner_profiles(my_products, all_products)
     
     expiring_products = get_expiring_products()
+    _attach_owner_profiles(expiring_products)
     notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
     if notice:
         now = timezone.now()
             
         for product in expiring_products:
-            product.notice_message = notice.message \
-                .replace("{{user}}", product.user.username) \
+            profile = getattr(product, "owner_profile", None)
+
+            if profile and profile.nick_name:
+                user_display = f"{profile.nick_name}（{product.user.username}）"
+            else:
+                user_display = product.user.username
+
+            product.notice_message = (
+                notice.message
+                .replace("{{user}}", user_display)
                 .replace("{{item}}", product.item_name)
+            )
+
         
     return render(request, 'product/producer_product_list.html', {
         'my_products': my_products,
@@ -284,6 +324,7 @@ def product_detail(request, pk):
         return redirect_response
 
     product = get_object_or_404(Product, pk=pk)
+    _attach_owner_profiles([product])
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
@@ -294,6 +335,7 @@ def product_detail(request, pk):
         .select_related('user')
         .prefetch_related('mentions__mentioned_user')
     )
+    _attach_user_profiles(comments)
     user_application = applications.filter(user=request.user).first()
 
     can_apply = (
