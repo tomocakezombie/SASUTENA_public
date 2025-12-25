@@ -296,19 +296,16 @@
 											</div>
 											{% if comment.user == user %}
 												<div class="dropdown">
-													<button class="btn btn-sm text-muted p-0 bg-transparent border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-														<span class="fs-5 lh-1">⋮</span>
-														<span class="visually-hidden">コメント操作</span>
-													</button>
+													<button	class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">編集</button>
 													<ul class="dropdown-menu dropdown-menu-end">
 														<li>
-															<button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.item_comment_id }}">コメントを編集</button>
+														<button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.item_comment_id }}">コメントを編集</button>
 														</li>
 														<li>
-															<form method="post" action="{% url 'product:comment_delete' comment.item_comment_id %}" class="comment-delete-form">
-																{% csrf_token %}
-																<button type="submit" class="dropdown-item text-danger">コメントを削除</button>
-															</form>
+														<form method="post" action="{% url 'product:comment_delete' comment.item_comment_id %}" class="comment-delete-form">
+															{% csrf_token %}
+															<button type="submit" class="dropdown-item text-danger">コメントを削除</button>
+														</form>
 														</li>
 													</ul>
 												</div>
