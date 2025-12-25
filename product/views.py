@@ -1,14 +1,75 @@
+import re
+
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.utils import timezone
+from django.db.models import Q
+
+from accounts.models import UserProfile
 
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
 from .mentions import sync_comment_mentions
 
+from django.utils import timezone
+from datetime import timedelta
+
+from adminPortal.models import ExpirationNoticeSetting
+
+def _get_profiles_map(user_ids):
+    """Return a mapping of user_id to profile for given users."""
+    if not user_ids:
+        return {}
+    profiles = UserProfile.objects.filter(user_id__in=user_ids).select_related("user")
+    return {profile.user_id: profile for profile in profiles}
+
+
+def _attach_owner_profiles(*product_iterables):
+    """Attach related user profiles to product instances for template use."""
+    all_products = []
+    for iterable in product_iterables:
+        if iterable:
+            all_products.extend(iterable)
+    if not all_products:
+        return
+
+    user_ids = {product.user_id for product in all_products}
+    if not user_ids:
+        return
+
+    profile_map = _get_profiles_map(user_ids)
+
+    for product in all_products:
+        product.owner_profile = profile_map.get(product.user_id)
+
+
+def _redirect_for_role_mismatch(request, allowed_roles, info_message):
+    """Redirect users whose role is not permitted for the current page."""
+    role = getattr(request.user, "role", "")
+    if role in allowed_roles:
+        return None
+    if info_message:
+        messages.info(request, info_message)
+    if role == "admin":
+        return redirect("adminPortal:admin_portal_list")
+    if role == "producer":
+        return redirect("product:producer_product_list")
+    if role == "consumer":
+        return redirect("product:consumer_product_list")
+    return redirect("login:index")
+
 @login_required
 def product_create(request):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "生産者専用のページです。",
+    )
+    if redirect_response:
+        return redirect_response
+
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
         print("フォーム送信を受け取りました")
@@ -17,6 +78,7 @@ def product_create(request):
             product = form.save(commit=False)
             product.user = request.user
             product.save()
+            form.save_m2m()
             return redirect('product:producer_product_list')
         print("フォームは無効です")
         return render(request, 'product/product_create.html', {'form': form})
@@ -31,6 +93,14 @@ def product_list(request):
 
 @login_required
 def product_delete(request, pk):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "生産者専用のページです。",
+    )
+    if redirect_response:
+        return redirect_response
+
     product = get_object_or_404(Product, pk=pk)
 
     # 自分の商品以外は削除させない
@@ -40,26 +110,179 @@ def product_delete(request, pk):
     product.delete()
     return redirect('product:producer_product_list')
 
+
+@login_required
+@require_POST
+def product_complete(request, pk):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "生産者専用のページです。",
+    )
+    if redirect_response:
+        return redirect_response
+
+    product = get_object_or_404(Product, pk=pk, user=request.user)
+
+    if product.completed:
+        messages.info(request, "すでに完了通知済みです。")
+        return redirect("product:producer_product_list")
+
+    if not (product.valid and product.publish):
+        messages.warning(request, "承認済みかつ公開中の商品だけ完了通知できます。")
+        return redirect("product:producer_product_list")
+
+    product.completed = True
+    product.completed_notified_at = timezone.now()
+    product.save(update_fields=["completed", "completed_notified_at"])
+    messages.success(request, f"{product.item_name} の取引完了を通知しました。")
+    return redirect("product:producer_product_list")
+
 @login_required
 def consumer_product_list(request):
-    products = Product.objects.filter(publish=True, valid=True, completed=False).order_by('-created_at')
-    return render(request, 'product/consumer_product_list.html', {'products': products})
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"consumer"},
+        "このページは消費者向けです。",
+    )
+    if redirect_response:
+        return redirect_response
+    base_queryset = (
+        Product.objects.filter(publish=True, valid=True, completed=False)
+        .select_related("user")
+        .prefetch_related("tags")
+    )
+
+    search_query = (request.GET.get("q") or "").strip()
+    search_tokens = [token for token in re.split(r"\s+", search_query) if token]
+    if search_tokens:
+        unique_tokens = []
+        for token in search_tokens:
+            if token not in unique_tokens:
+                unique_tokens.append(token)
+        search_tokens = unique_tokens
+
+    quantity_min = request.GET.get("quantity_min")
+    quantity_max = request.GET.get("quantity_max")
+    start_after = request.GET.get("start_after")
+    end_before = request.GET.get("end_before")
+
+    filtered_products = base_queryset
+    if search_tokens:
+        for token in search_tokens:
+            token_filter = (
+                Q(item_name__icontains=token)
+                | Q(description__icontains=token)
+                | Q(user__username__icontains=token)
+                | Q(tags__tag_name__icontains=token)
+            )
+            filtered_products = filtered_products.filter(token_filter)
+
+    if quantity_min:
+        try:
+            quantity_min_value = int(quantity_min)
+        except ValueError:
+            quantity_min_value = None
+        if quantity_min_value is not None:
+            filtered_products = filtered_products.filter(number__gte=quantity_min_value)
+
+    if quantity_max:
+        try:
+            quantity_max_value = int(quantity_max)
+        except ValueError:
+            quantity_max_value = None
+        if quantity_max_value is not None:
+            filtered_products = filtered_products.filter(number__lte=quantity_max_value)
+
+    if start_after:
+        filtered_products = filtered_products.filter(start_time__date__gte=start_after)
+
+    if end_before:
+        filtered_products = filtered_products.filter(end_time__date__lte=end_before)
+
+    products = list(filtered_products.distinct().order_by('-created_at'))
+    _attach_owner_profiles(products)
+    filter_active = bool(
+        search_tokens
+        or quantity_min
+        or quantity_max
+        or start_after
+        or end_before
+    )
+
+    expiring_products = get_expiring_products()
+    
+    notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
+    if notice:
+        now = timezone.now()
+    
+        for product in expiring_products:
+            product.notice_message = notice.message \
+                .replace("{{user}}", product.user.username) \
+                .replace("{{item}}", product.item_name)
+                
+    return render(
+        request,
+        'product/consumer_product_list.html',
+        {
+            'products': products,
+            'search_query': search_query,
+            'search_tokens': search_tokens,
+            'quantity_min': quantity_min or "",
+            'quantity_max': quantity_max or "",
+            'start_after': start_after or "",
+            'end_before': end_before or "",
+            'filter_active': filter_active,
+            'expiring_products': expiring_products,
+            'expiration_notice': notice,
+        },
+    )
 
 @login_required
 def producer_product_list(request):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "このページは生産者向けです。",
+    )
+    if redirect_response:
+        return redirect_response
+
     user = request.user
     #自分の出品商品一覧
-    my_products = Product.objects.filter(user=user).order_by('-created_at')
+    my_products = list(Product.objects.filter(user=user).order_by('-created_at'))
     #全体の出品商品一覧（承認前も含む）
-    all_products = Product.objects.all().order_by('-created_at')
+    all_products = list(Product.objects.all().order_by('-created_at'))
+
+    _attach_owner_profiles(my_products, all_products)
     
+    expiring_products = get_expiring_products()
+    notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
+    if notice:
+        now = timezone.now()
+            
+        for product in expiring_products:
+            product.notice_message = notice.message \
+                .replace("{{user}}", product.user.username) \
+                .replace("{{item}}", product.item_name)
+        
     return render(request, 'product/producer_product_list.html', {
         'my_products': my_products,
         'all_products': all_products,
+        'expiring_products': expiring_products,
+        'expiration_notice': notice,
     })
     
 @login_required
 def product_detail(request, pk):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"consumer", "producer"},
+        "商品の詳細は生産者・消費者のみ閲覧できます。",
+    )
+    if redirect_response:
+        return redirect_response
+
     product = get_object_or_404(Product, pk=pk)
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
@@ -80,6 +303,13 @@ def product_detail(request, pk):
         and product.valid
         and not product.completed
     )
+
+    if user_role == "consumer" and not product.publish:
+        messages.info(request, "非公開の商品にはアクセスできません。")
+        return redirect("product:consumer_product_list")
+    if user_role == "consumer" and not product.valid:
+        messages.info(request, "承認前の商品にはアクセスできません。")
+        return redirect("product:consumer_product_list")
 
     application_form = ProductApplicationForm() if can_apply and not user_application else None
     comment_form = ProductCommentForm()
@@ -121,7 +351,7 @@ def product_detail(request, pk):
     return render(request, 'product/product_detail.html', {
         'product': product,
         'is_owner': is_owner,
-        'applications': applications.order_by('-apply_time'),
+        'applications': applications,
         'show_apply_button': can_apply and user_application is None,
         'application_form': application_form,
         'user_application': user_application,
@@ -165,3 +395,31 @@ def product_comment_delete(request, comment_id):
     comment.save(update_fields=['delete_flag'])
     messages.success(request, 'コメントを削除しました。')
     return redirect('product:product_detail', pk=comment.product.pk)
+
+
+def get_expiring_products():
+    now = timezone.now()
+
+    notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
+    days_before = notice.notify_days_before if notice else 1
+
+    limit = now + timedelta(days=days_before)
+
+    return Product.objects.filter(
+        end_time__gte=now,
+        end_time__lte=limit,
+        show_expiration_notice=True,
+        completed=False,
+        publish=True,
+        valid=True,
+    ).select_related("user")
+
+
+@login_required
+def toggle_expiration_notice(request, pk):
+    product = get_object_or_404(Product, pk=pk, user=request.user)
+    if request.method == "POST":
+        product.show_expiration_notice = not product.show_expiration_notice
+        product.save()
+    return redirect("product:product_detail", pk=pk)
+

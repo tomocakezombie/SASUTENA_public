@@ -18,6 +18,13 @@
         <div class="card-header bg-white">
           <h1 class="h5 mb-0">会話相手</h1>
         </div>
+
+        <div class="input-group mb-2">
+          <span class="input-group-text">検索</span>
+          <input type="search" class="form-control" id="userSearchInput" placeholder="ユーザー名で検索" autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary" id="userSearchClear">クリア</button>
+        </div>
+
         <div class="list-group list-group-flush" id="conversationList">
           {% for entry in user_entries %}
           {% with first_thread=entry.threads|first %}
@@ -46,11 +53,21 @@
             </div>
             <div class="text-end">
               {% if first_thread and first_thread.latest_time %}
-              <div class="small text-muted">{{ first_thread.latest_time|date:"n/j H:i" }}</div>
+              <div class="small text-muted">
+                {{ first_thread.latest_time|date:"n/j H:i" }}
+              </div>
               {% endif %}
-              {% if entry.unread %}
+
+              {% if entry.unread_count > 0 %}
+                <span class="badge text-bg-warning mt-1">
+                  {% comment %} {{ thread.unread_count }} {% endcomment %}
+                  {{ entry.unread_count }}
+                </span>
+              {% endif %}
+
+              {% comment %} {% if entry.unread %}
               <span class="badge text-bg-danger mt-1">新着</span>
-              {% endif %}
+              {% endif %} {% endcomment %}
             </div>
           </button>
           {% endwith %}
@@ -64,9 +81,29 @@
       <div class="card h-100 shadow-sm border-0" id="conversationCard"
            data-initial-url="{{ initial_conversation_url }}"
            data-initial-username="{{ initial_username }}">
-        <div class="card-header bg-white">
-          <h2 class="h5 mb-0" id="conversationTitle">会話相手を選択してください</h2>
-          <div class="small text-muted" id="conversationSubtitle">左のリストからユーザーを選択してください。</div>
+
+        <div class="card-header bg-white d-flex justify-content-between align-items-start">
+
+          <!-- 左側：タイトル -->
+          <div>
+            <h2 class="h5 mb-0" id="conversationTitle">
+            会話相手を選択してください
+          </h2>
+          <div class="small text-muted" id="conversationSubtitle">
+            左のリストからユーザーを選択してください。
+          </div>
+        </div>
+
+        <!-- 右側：プロフィールボタン -->
+        <a
+          id="profileButton"
+          href="#"
+          class="btn btn-outline-primary btn-sm d-none"
+          data-profile-url-template="{% url 'accounts:profile_detail' '__USERNAME__' %}"
+        >
+          プロフィール
+        </a>
+
         </div>
         <div class="card-body bg-light d-flex flex-column gap-3">
           <section id="threadPicker">
@@ -103,7 +140,14 @@
                   </div>
                   <div class="text-end">
                     {% if thread.latest_time %}<div class="small text-muted">{{ thread.latest_time|date:"n/j H:i" }}</div>{% endif %}
-                    {% if thread.unread %}<span class="badge text-bg-warning mt-1">新着</span>{% endif %}
+                    {% comment %} {% if thread.unread %}<span class="badge text-bg-warning mt-1">新着</span>{% endif %} {% endcomment %}
+
+                    {% if thread.unread_count > 0 %}
+                      <span class="badge text-bg-danger mt-1">
+                        {{ thread.unread_count }}
+                      </span>
+                    {% endif %}
+
                   </div>
                 </button>
                 {% endfor %}
@@ -115,7 +159,7 @@
           </section>
           <section class="flex-grow-1">
             <div class="bg-white rounded-3 h-100 p-3" id="conversationContent">
-              <p class="text-muted small mb-0">ユーザーとトークを選択するとここに表示されます。</p>
+              <p class="text-muted small mb-0">会話相手を選択するとここに表示されます。</p>
             </div>
           </section>
         </div>
@@ -133,6 +177,9 @@
   const formWrapper = document.getElementById('messageFormWrapper');
   const titleEl = document.getElementById('conversationTitle');
   const subtitleEl = document.getElementById('conversationSubtitle');
+  const profileButton = document.getElementById('profileButton');
+  const userSearchInput = document.getElementById('userSearchInput');
+  const userSearchClear = document.getElementById('userSearchClear');
   let currentUrl = '';
   let selectedUserButton = null;
   let activeThreadButton = null;
@@ -249,9 +296,26 @@
       }
       button.addEventListener('click', () => {
         const threadUrl = button.dataset.threadUrl || '';
-        if (threadUrl) {
-          loadConversation(threadUrl, button);
+        if (!threadUrl)return; //{
+
+          // ★ 今選択中のユーザー名を取得
+        const username = document
+          .querySelector('.conversation-user.active')
+          ?.dataset.username;
+
+        // ★ ① スレッドの未読数を消す
+        const clearedCount = clearThreadUnread(button);
+
+        // ★ ② 左側ユーザーの未読数を減らす
+        if (username) {
+          decreaseUserUnread(username, clearedCount);
         }
+
+        // ③ ★ ヘッダー未読を減らす（ここが今まで動いてなかった）
+        decreaseHeaderUnread(clearedCount);
+
+        loadConversation(threadUrl, button);
+        //}
       });
       button.dataset.bound = 'true';
     });
@@ -313,6 +377,9 @@
     formWrapper.hidden = true;
     formWrapper.innerHTML = '';
     currentUrl = '';
+    if (profileButton) {
+      profileButton.classList.add('d-none');
+    }
   }
 
   function applyThreadBinding(form, threadElement) {
@@ -523,7 +590,7 @@
     return button;
   }
 
-  function syncUserPreview(username, threadElement) {
+  function syncUserPreview(username, threadElement,shouldMove) {
     if (!userList) {
       return;
     }
@@ -547,6 +614,9 @@
       const authorLabel = authorNode ? authorNode.textContent.trim() : '';
       const previewLine = authorLabel ? authorLabel + ': ' + previewContent : previewContent;
       previewLabel.textContent = '最新: ' + previewLine;
+    }
+    if(shouldMove && button && userList){
+      userList.prepend(button);
     }
   }
 
@@ -595,7 +665,8 @@
     }
 
     const syncedButton = syncThreadButton(thread);
-    syncUserPreview(counterpart, thread);
+    const shouldMove = !triggerButton;
+    syncUserPreview(counterpart, thread,shouldMove);
 
     if (triggerButton) {
       setActiveThread(triggerButton);
@@ -636,6 +707,15 @@
     subtitleEl.textContent = 'トークを選択してください。';
     clearConversation(username);
 
+
+    if (profileButton) {
+      const template = profileButton.dataset.profileUrlTemplate;
+      profileButton.href = template.replace('__USERNAME__', username);
+      profileButton.textContent = `${username} のプロフィール`;
+      profileButton.classList.remove('d-none');
+    }
+
+
     if (threadUrl) {
       const group = getThreadGroup(username);
       const threadButton = group ? group.querySelector('.thread-button[data-thread-url="' + threadUrl + '"]') : null;
@@ -646,6 +726,77 @@
       }
     }
   }
+
+  function filterUsers() {
+    const term = userSearchInput.value.trim().toLowerCase();
+    const users = userList.querySelectorAll('.conversation-user');
+    users.forEach(user => {
+      const username = user.dataset.username.toLowerCase();
+      user.classList.toggle('d-none', term !== '' && !username.includes(term));
+    });
+  }
+
+  if (userSearchInput) {
+    userSearchInput.addEventListener('input', filterUsers);
+  }
+  if (userSearchClear) {
+    userSearchClear.addEventListener('click', () => {
+      userSearchInput.value = '';
+      filterUsers();
+      userSearchInput.focus();
+    });
+  }
+
+
+  function clearThreadUnread(threadButton) {
+    if (!threadButton) return 0;
+
+    const badge = threadButton.querySelector('.badge');
+    if (!badge) return 0;
+
+    const count = parseInt(badge.textContent, 10) || 0;
+    badge.remove();
+    return count;
+  }
+
+  function decreaseUserUnread(username, diff) {
+    if (!diff || diff <= 0) return;
+
+    const userButton = document.querySelector(
+      `.conversation-user[data-username="${username}"]`
+    );
+    if (!userButton) return;
+
+    const badge = userButton.querySelector('.badge');
+    if (!badge) return;
+
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - diff;
+
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.remove(); 
+    }
+  }
+
+
+  function decreaseHeaderUnread(diff) {
+    if (!diff || diff <= 0) return;
+
+    const badge = document.getElementById('header-dm-badge');
+    if (!badge) return;
+
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - diff;
+
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.remove(); 
+    }
+  }
+
 
   if (userList) {
     userList.querySelectorAll('.conversation-user').forEach(button => {
@@ -659,12 +810,18 @@
   attachSearchToggle();
   attachThreadButtons();
 
-  const initialUsername = card.dataset.initialUsername;
-  const initialUrl = card.dataset.initialUrl;
+  const initialUsername = card ? card.dataset.initialUsername : '';
+  const initialUrl = card ? card.dataset.initialUrl : '';
   if (initialUsername) {
-    const initialButton = userList ? userList.querySelector('.conversation-user[data-username="' + initialUsername + '"]') : null;
+    const selector = '.conversation-user[data-username="' + initialUsername + '"]';
+    const initialButton = userList ? userList.querySelector(selector) : null;
     if (initialButton) {
-      selectUser(initialButton, {autoThreadUrl: initialUrl || initialButton.dataset.initialThreadUrl || ''});
+      selectUser(initialButton, {autoThreadUrl: initialUrl});
+    }
+  } else if (initialUrl && userList) {
+    const firstButton = userList.querySelector('.conversation-user');
+    if (firstButton) {
+      selectUser(firstButton, {autoThreadUrl: initialUrl});
     }
   }
 })();

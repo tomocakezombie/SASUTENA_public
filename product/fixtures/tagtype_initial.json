@@ -1,0 +1,66 @@
+[
+  {
+    "model": "product.tagtype",
+    "pk": 1,
+    "fields": {
+      "tag_name": "有機栽培",
+      "created_t": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 2,
+    "fields": {
+      "tag_name": "低農薬",
+      "created_t": "2025-01-01T00:05:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 3,
+    "fields": {
+      "tag_name": "朝採れ",
+      "created_t": "2025-01-01T00:10:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 4,
+    "fields": {
+      "tag_name": "ヴィーガン対応",
+      "created_t": "2025-01-01T00:15:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 5,
+    "fields": {
+      "tag_name": "グルテンフリー",
+      "created_t": "2025-01-01T00:20:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 6,
+    "fields": {
+      "tag_name": "冷凍保存",
+      "created_t": "2025-01-01T00:25:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 7,
+    "fields": {
+      "tag_name": "加工品",
+      "created_t": "2025-01-01T00:30:00Z"
+    }
+  },
+  {
+    "model": "product.tagtype",
+    "pk": 8,
+    "fields": {
+      "tag_name": "贈答向け",
+      "created_t": "2025-01-01T00:35:00Z"
+    }
+  }
+]

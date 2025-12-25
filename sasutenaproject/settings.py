@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "product.apps.ProductConfig",
     "comunicate.apps.ComunicateConfig",
+    "adminPortal.apps.AdminportalConfig",
 ]
 
 MIDDLEWARE = [
@@ -67,6 +68,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "comunicate.context_processors.unread_message_count",
+                "accounts.context_processors.current_user_profile",
             ],
         },
     },

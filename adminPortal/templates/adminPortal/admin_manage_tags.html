@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}タグ管理 | Sasutena Project{% endblock %}
+
+{% block content %}
+<div class="py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h1 class="h4 mb-1">タグ管理</h1>
+            <p class="text-muted small mb-0">商品に付与できるタグを追加できます。</p>
+        </div>
+        <a href="{% url 'adminPortal:admin_portal_list' %}" class="btn btn-outline-secondary">ダッシュボードに戻る</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">タグを追加</h2>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            {{ form.tag_name.label_tag }}
+                            {{ form.tag_name }}
+                            <div class="form-text">1〜31文字で入力してください。</div>
+                            {% if form.tag_name.errors %}
+                                {% for error in form.tag_name.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">タグを追加</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">登録済みタグ</h2>
+                    {% if tag_list %}
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 20%;">タグID</th>
+                                        <th scope="col">タグ名</th>
+                                        <th scope="col" style="width: 30%;">登録日時</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tag in tag_list %}
+                                    <tr>
+                                        <td>{{ tag.tag_id }}</td>
+                                        <td>{{ tag.tag_name }}</td>
+                                        <td>{{ tag.created_t|date:"Y/m/d H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">まだ登録されたタグはありません。</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

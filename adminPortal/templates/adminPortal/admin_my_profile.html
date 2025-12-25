@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}管理者マイページ | Sasutena Project{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{% static 'css/accounts/mypage.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="py-5 profile-page">
+  <div class="profile-container">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="text-center mb-4">
+          <div class="mb-3">
+            {% if profile and profile.icon_image %}
+            <img src="{{ profile.icon_image.url }}" alt="{{ user_obj.username }} さんのアイコン" class="rounded-circle border" style="width:96px; height:96px; object-fit:cover;">
+            {% else %}
+            <i class="bi bi-person-circle text-secondary" style="font-size:72px;"></i>
+            {% endif %}
+          </div>
+          <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:user_obj.username }} さん</h1>
+          <p class="small text-muted mb-2">管理者ロールでログイン中</p>
+          {% if rating_stars %}
+          <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
+            {% for star in rating_stars %}
+              {% if star == "full" %}
+              <i class="bi bi-star-fill text-warning"></i>
+              {% elif star == "half" %}
+              <i class="bi bi-star-half text-warning"></i>
+              {% else %}
+              <i class="bi bi-star text-warning"></i>
+              {% endif %}
+            {% endfor %}
+            <span class="small text-muted ms-2">({{ rating_average|floatformat:1 }})</span>
+            <span class="small text-muted">全{{ rating_count }}件</span>
+          </div>
+          {% else %}
+          <p class="small text-muted mb-2">まだ評価はありません。</p>
+          {% endif %}
+          <div class="d-flex justify-content-center gap-2">
+            <button type="button" id="profileEditBtn" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+              <i class="bi bi-pencil-square"></i><span class="ms-1">プロフィールを編集</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card border-0 bg-body-tertiary">
+          <div class="card-body">
+            <h2 class="h6 text-muted mb-3">自己紹介</h2>
+            <div id="profileBioDisplay" class="mb-3" data-has-bio="{% if profile and profile.content_profile %}1{% else %}0{% endif %}">
+              {% if profile and profile.content_profile %}
+              <p id="profileBioText" class="mb-0">{{ profile.content_profile|linebreaksbr }}</p>
+              {% else %}
+              <p id="profileBioText" class="mb-0 text-muted">自己紹介はまだ設定されていません。</p>
+              {% endif %}
+            </div>
+            <div id="profileBioEditor" class="mb-3 d-none" data-update-url="{% url 'accounts:update_profile_bio' %}">
+              <label for="bioText" class="form-label small">自己紹介（プロフィール）</label>
+              <textarea id="bioText" class="form-control mb-2" rows="4" placeholder="自己紹介を入力してください" maxlength="100">{% if profile and profile.content_profile %}{{ profile.content_profile }}{% endif %}</textarea>
+              <div class="form-text">100文字以内で入力してください。</div>
+              <div class="d-flex justify-content-center gap-2">
+                <button id="saveBio" type="button" class="btn btn-primary btn-sm">保存</button>
+                <button id="cancelBio" type="button" class="btn btn-outline-secondary btn-sm">キャンセル</button>
+              </div>
+            </div>
+            <div id="profileBioMessage" class="alert alert-success d-none small mb-0" role="alert"></div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <section class="mx-auto" style="max-width:720px;">
+          <h2 class="h6 text-center mb-3">管理者クイックリンク</h2>
+          <div id="quickLinks" class="row g-3 justify-content-center">
+            
+            <div class="col-12 col-md-6">
+              <a href="{% url 'adminPortal:admin_portal_list' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                <div class="card-body d-flex align-items-start gap-3">
+                  <span class="link-icon link-icon-info"><i class="bi bi-box-seam"></i></span>
+                  <div>
+                    <div class="fw-semibold mb-1">申請・商品管理</div>
+                    <div class="small text-muted mb-0">アカウント承認と商品公開状態を確認します。</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <a href="{% url 'adminPortal:admin_message_monitor' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                <div class="card-body d-flex align-items-start gap-3">
+                  <span class="link-icon link-icon-info"><i class="bi bi-chat-dots"></i></span>
+                  <div>
+                    <div class="fw-semibold mb-1">メッセージ管理・監視</div>
+                    <div class="small text-muted mb-0">ユーザー間メッセージをモニタリングします。</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <a href="history.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                <div class="card-body d-flex align-items-start gap-3">
+                  <span class="link-icon link-icon-warning"><i class="bi bi-clock-history"></i></span>
+                  <div>
+                    <div class="fw-semibold mb-1">過去の取引履歴</div>
+                    <div class="small text-muted mb-0">申込みや受け取りなどの履歴を確認します。</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <a href="{% url 'accounts:settings' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+                <div class="card-body d-flex align-items-start gap-3">
+                  <span class="link-icon link-icon-secondary"><i class="bi bi-gear"></i></span>
+                  <div>
+                    <div class="fw-semibold mb-1">アカウント設定</div>
+                    <div class="small text-muted mb-0">プロフィールや通知設定を更新します。</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{{ profile.content_profile|default_if_none:''|json_script:"initial-profile-bio" }}
+<script src="{% static 'js/accounts/my_profile.js' %}"></script>
+{% endblock %}

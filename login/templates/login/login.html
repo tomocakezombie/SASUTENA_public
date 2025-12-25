@@ -19,7 +19,6 @@
 </head> {% endcomment %}
 
 
-
 {%  block content%}
 
 <body class="bg-light bootstrap-enabled">
@@ -86,7 +85,7 @@
                     </div>
 
                     <div class="card-footer bg-transparent border-0 pt-0">
-                        <a href="#" class="small d-inline-block mb-2">パスワードをお忘れの方はこちら</a><br>
+                        <a href="{% url 'login:password_change' %}" class="small d-inline-block mb-2">パスワードをお忘れの方はこちら</a><br>
                         <a href="{% url 'login:signup' %}" class="small">アカウントをお持ちでない方は登録申請へ</a>
                     </div>
                 </div>

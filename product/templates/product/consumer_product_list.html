@@ -3,6 +3,22 @@
 {% block title %}商品検索・申込み{% endblock %}
 
 {% block content %}
+
+{% if expiring_products %}
+<div id="expiration-banner" class="alert py-2 px-3 mb-3" style="overflow:hidden; white-space:nowrap; background-color: {{ expiration_notice.bg_color }}; color: {{ expiration_notice.text_color }};">
+    <div id="expiring-content" style="display:inline-block; white-space:nowrap;">
+        {% for product in expiring_products %}
+            <span class="expiring-item" style="margin-right:50px;">
+                {{ product.notice_message }}
+            </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+
+
+
 <div class="py-4">
 	<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
 		<div>
@@ -16,15 +32,82 @@
 		</div>
 	</div>
 
-	<form method="get" class="card border-0 shadow-sm mb-4">
+	<form method="get" class="card border-0 shadow-sm mb-4" id="productSearchForm">
 		<div class="card-body">
 			<label class="form-label text-muted">キーワード・タグで検索</label>
 			<div class="input-group">
-				<input type="text" name="q" class="form-control" placeholder="キーワードやタグ名を入力 (Enterでタグ追加)" value="{{ request.GET.q }}">
+				<input type="text" name="q" class="form-control" placeholder="キーワードやタグ名を入力 (空欄で全件表示)" value="{{ search_query }}" id="searchQueryInput">
 				<button class="btn btn-primary" type="submit">検索</button>
+			</div>
+			{% if search_tokens %}
+				<div class="mt-2">
+					<div class="small text-muted mb-1">選択中のタグ</div>
+					<div id="selectedTagList" class="d-flex flex-wrap align-items-center gap-2">
+						{% for token in search_tokens %}
+							<span class="badge text-bg-primary d-inline-flex align-items-center gap-2">
+								<span>{{ token }}</span>
+								<button type="button" class="btn-close btn-close-white btn-sm remove-tag" data-token="{{ token }}" aria-label="タグを削除"></button>
+							</span>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+			<div class="mt-3">
+				<button
+					type="button"
+					class="btn btn-outline-secondary btn-sm"
+					data-bs-toggle="collapse"
+					data-bs-target="#advancedFilters"
+					aria-expanded="{{ filter_active|yesno:'true,false' }}"
+					aria-controls="advancedFilters"
+				>
+					詳細フィルターを{{ filter_active|yesno:'閉じる,開く' }}
+				</button>
+				<div class="collapse {% if filter_active %}show{% endif %} mt-3" id="advancedFilters">
+					<div class="row g-3">
+						<div class="col-12 col-md-3">
+							<label for="quantityMin" class="form-label text-muted small">数量 (最小)</label>
+							<input type="number" min="0" step="1" class="form-control" id="quantityMin" name="quantity_min" value="{{ quantity_min }}">
+						</div>
+						<div class="col-12 col-md-3">
+							<label for="quantityMax" class="form-label text-muted small">数量 (最大)</label>
+							<input type="number" min="0" step="1" class="form-control" id="quantityMax" name="quantity_max" value="{{ quantity_max }}">
+						</div>
+						<div class="col-12 col-md-3">
+							<label for="startAfter" class="form-label text-muted small">受け渡し開始 (以降)</label>
+							<input type="date" class="form-control" id="startAfter" name="start_after" value="{{ start_after }}">
+						</div>
+						<div class="col-12 col-md-3">
+							<label for="endBefore" class="form-label text-muted small">受け渡し終了 (以前)</label>
+							<input type="date" class="form-control" id="endBefore" name="end_before" value="{{ end_before }}">
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</form>
+
+	{% if search_tokens or quantity_min or quantity_max or start_after or end_before %}
+		<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+			<span class="text-muted small">絞り込み条件:</span>
+			{% for token in search_tokens %}
+				<span class="badge text-bg-light text-secondary fw-normal">#{{ token }}</span>
+			{% endfor %}
+			{% if quantity_min %}
+				<span class="badge text-bg-light text-primary fw-normal">数量 ≥ {{ quantity_min }}</span>
+			{% endif %}
+			{% if quantity_max %}
+				<span class="badge text-bg-light text-primary fw-normal">数量 ≤ {{ quantity_max }}</span>
+			{% endif %}
+			{% if start_after %}
+				<span class="badge text-bg-light text-primary fw-normal">開始 ≥ {{ start_after }}</span>
+			{% endif %}
+			{% if end_before %}
+				<span class="badge text-bg-light text-primary fw-normal">終了 ≤ {{ end_before }}</span>
+			{% endif %}
+			<a class="btn btn-link btn-sm p-0 ms-2" href="{% url 'product:consumer_product_list' %}">条件をクリア</a>
+		</div>
+	{% endif %}
 
 	{% if products %}
 		<p class="text-muted small mb-3">アイテムをクリックして詳細／申込みができます。</p>
@@ -48,13 +131,31 @@
 							<div class="d-flex flex-wrap gap-3 text-muted small mb-3">
 								<span>数量：{{ product.number }}</span>
 								<span>受け渡し：{{ product.start_time|date:"Y-m-d" }} ～ {{ product.end_time|date:"Y-m-d" }}</span>
-								{% if product.tags %}
-								<span>タグ：{{ product.tags }}</span>
-								{% endif %}
+								{% with product.tags.all as tag_list %}
+									{% if tag_list %}
+										<span class="d-flex flex-wrap gap-1 align-items-center">
+											<span>タグ：</span>
+											{% for tag in tag_list %}
+												<span class="badge text-bg-light text-secondary fw-normal">#{{ tag.tag_name }}</span>
+											{% endfor %}
+										</span>
+									{% endif %}
+								{% endwith %}
 							</div>
 
 							<div class="d-flex flex-wrap align-items-center gap-3">
-								<span class="text-muted small">出品者：{{ product.user.username }}</span>
+								<div class="d-flex align-items-center gap-2 text-muted small">
+									<span>出品者：</span>
+									<a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+										{% if product.owner_profile and product.owner_profile.icon_image %}
+											<img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
+										{% else %}
+											<i class="bi bi-person-circle fs-4 text-secondary"></i>
+										{% endif %}
+										<span class="fw-semibold text-muted">{{ product.user.username }}</span>
+										<span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+									</a>
+								</div>
 								<a class="btn btn-link p-0" href="{% url 'product:product_detail' product.pk %}">詳細／申込み</a>
 							</div>
 						</div>
@@ -70,4 +171,58 @@
 		</div>
 	{% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	var form = document.getElementById('productSearchForm');
+	var queryInput = document.getElementById('searchQueryInput');
+	var removeButtons = document.querySelectorAll('#selectedTagList .remove-tag');
+
+	removeButtons.forEach(function (button) {
+		button.addEventListener('click', function (event) {
+			event.preventDefault();
+			var tokenValue = button.dataset.token;
+			if (tokenValue && queryInput) {
+				var tokens = queryInput.value
+					.split(/\s+/)
+					.filter(function (value) {
+						return value && value !== tokenValue;
+					});
+				queryInput.value = tokens.join(' ');
+			}
+
+			if (form) {
+				form.submit();
+			}
+		});
+	});
+	const banner = document.getElementById('expiration-banner');
+    const content = document.getElementById('expiring-content');
+
+    if (!banner || !content) return;
+
+    let scrollSpeed =1.5; // スクロール速度を調整可能
+    let contentWidth = content.offsetWidth;
+
+    content.style.transform = `translateX(${banner.offsetWidth}px)`;
+
+    function scroll() {
+        const currentTransform = parseFloat(content.style.transform.replace('translateX(', '').replace('px)', ''));
+        const newTransform = currentTransform - scrollSpeed;
+
+        if (newTransform + contentWidth <= 0) {
+            content.style.transform = `translateX(${banner.offsetWidth}px)`; 
+        } else {
+            content.style.transform = `translateX(${newTransform}px)`; 
+        }
+
+        requestAnimationFrame(scroll);
+    }
+
+    scroll();
+});
+</script>
 {% endblock %}

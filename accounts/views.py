@@ -1,16 +1,21 @@
 import json
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.db.models import Avg, Count
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .forms import UserEvaluationForm, userSettings
 from .models import UserEvaluation, UserProfile
+
+from product.models import ProductApplication , Product
+from django.db.models import Count
 
 
 User = get_user_model()
@@ -47,6 +52,10 @@ def my_page(request):
 		avg=Avg("score"),
 		count=Count("id"),
 	)
+
+	if getattr(request.user, "role", "") == "admin":
+		return redirect("adminPortal:my_page")
+
 	return render(
 		request,
 		"accounts/my_profile.html",
@@ -102,34 +111,53 @@ def settings(request):
 
 	old_icon_name = profile.icon_image.name if profile.icon_image else None
 
-	form = userSettings(
-		request.POST or None,
-		request.FILES or None,
+	profile_form = userSettings(
+		request.POST if request.method == "POST" and request.POST.get("form_type") == "profile" else None,
+		request.FILES if request.method == "POST" and request.POST.get("form_type") == "profile" else None,
 		instance=profile,
 	)
+	password_form = PasswordChangeForm(
+		user=request.user,
+		data=request.POST if request.method == "POST" and request.POST.get("form_type") == "password" else None,
+	)
+	for field in password_form.fields.values():
+		existing_classes = field.widget.attrs.get("class", "")
+		field.widget.attrs["class"] = (existing_classes + " form-control").strip()
+		field.widget.attrs.pop("autofocus", None)
 
-	if request.method == "POST" and form.is_valid():
-		updated_profile = form.save(commit=False)
-		icon_field = form.cleaned_data.get("icon_image")
+	if request.method == "POST":
+		form_type = request.POST.get("form_type")
+		if form_type == "profile" and profile_form.is_valid():
+			updated_profile = profile_form.save(commit=False)
+			icon_field = profile_form.cleaned_data.get("icon_image")
 
-		if icon_field is False:
-			updated_profile.icon_image = None
-		if not updated_profile.nick_name:
-			updated_profile.nick_name = request.user.username
-		updated_profile.save()
-		form.save_m2m()
+			if icon_field is False:
+				updated_profile.icon_image = None
+			if not updated_profile.nick_name:
+				updated_profile.nick_name = request.user.username
+			updated_profile.save()
+			profile_form.save_m2m()
 
-		new_icon_name = updated_profile.icon_image.name if updated_profile.icon_image else None
-		if old_icon_name and old_icon_name != new_icon_name:
-			default_storage.delete(old_icon_name)
-		return redirect("accounts:my_page")
+			new_icon_name = updated_profile.icon_image.name if updated_profile.icon_image else None
+			if old_icon_name and old_icon_name != new_icon_name:
+				default_storage.delete(old_icon_name)
+			messages.success(request, "プロフィールを更新しました。")
+			return redirect("accounts:settings")
+		if form_type == "password" and password_form.is_valid():
+			user = password_form.save()
+			update_session_auth_hash(request, user)
+			messages.success(request, "パスワードを更新しました。")
+			return redirect("accounts:settings")
+		if form_type not in {"profile", "password"}:
+			messages.error(request, "送信内容を処理できませんでした。改めてお試しください。")
 
 	return render(
 		request,
 		"accounts/settings.html",
 		{
 			"profile": profile,
-			"form": form,
+			"profile_form": profile_form,
+			"password_form": password_form,
 		},
 	)
 
@@ -175,6 +203,14 @@ def evaluate(request, username):
 	if target_user == request.user:
 		return HttpResponseForbidden("自分を評価することはできません。")
 
+	requested_next = request.POST.get("next") or request.GET.get("next")
+	if requested_next and not url_has_allowed_host_and_scheme(
+			requested_next,
+			allowed_hosts={request.get_host()},
+			require_https=request.is_secure(),
+	):
+		requested_next = None
+
 	evaluation = UserEvaluation.objects.filter(
 		target_user_id=target_user,
 		from_user_id=request.user,
@@ -188,6 +224,8 @@ def evaluate(request, username):
 			evaluation.from_user_id = request.user
 			evaluation.save()
 			messages.success(request, f"{target_user.username} さんへの評価を保存しました。")
+			if requested_next:
+				return redirect(requested_next)
 			return redirect("accounts:profile_detail", username=target_user.username)
 	else:
 		form = UserEvaluationForm(instance=evaluation)
@@ -200,6 +238,136 @@ def evaluate(request, username):
 			"form": form,
 			"current_score": evaluation.score if evaluation else None,
 			"current_comment": evaluation.comment if evaluation else None,
+			"next_url": requested_next,
 		},
 	)
+
+
+@login_required
+def producer_evaluation_overview(request):
+	"""Show producer list with entry points for submitting evaluations."""
+	if getattr(request.user, "role", "") != "consumer":
+		return HttpResponseForbidden("このページには消費者のみアクセスできます。")
+
+	producer_list = (
+		User.objects.filter(role="producer")
+		.annotate(average_score=Avg("evaluations__score"), rating_count=Count("evaluations__id"))
+		.order_by("username")
+	)
+
+	evaluation_history = (
+		UserEvaluation.objects.filter(from_user_id=request.user)
+		.select_related("target_user_id")
+		.order_by("-id")
+	)
+
+	return render(
+		request,
+		"accounts/producer_evaluation_overview.html",
+		{
+			"producer_list": producer_list,
+			"evaluation_history": evaluation_history,
+		},
+	)
+
+
+
+@login_required
+def history(request):
+	user = request.user
+	role = getattr(user, "role", "")
+
+	summary = {}
+	applied_list = []
+	completed_list = []
+	received_list = []
+	product_list = []
+	pending_list = []
+ 
+	# views.py で追加
+	STATUS_DISPLAY = {
+		ProductApplication.STATUS_PENDING: "pending",
+		ProductApplication.STATUS_APPROVED: "completed",
+		ProductApplication.STATUS_DECLINED: "declined",
+		ProductApplication.STATUS_CANCELLED: "cancelled",
+	}
+ 
+	if role == "consumer":
+		applied_qs = ProductApplication.objects.filter(user=user).select_related("product")
+		completed_list = applied_qs.filter(apply_status=ProductApplication.STATUS_APPROVED).order_by("-apply_time")
+		applied_list = applied_qs.order_by("-apply_time")
+		pending_list = applied_qs.filter(apply_status=ProductApplication.STATUS_PENDING).order_by("-apply_time")
+  
+			# ループで追加
+		for app in completed_list:
+			app.status_str = STATUS_DISPLAY[app.apply_status]
+
+		for app in pending_list:
+			app.status_str = STATUS_DISPLAY[app.apply_status]
+
+		summary = {
+			"completed": completed_list.count(),
+			"applied": applied_list.count(),
+		}
+
+	elif role == "producer":
+		my_products = Product.objects.filter(user=user)
+		product_list = my_products.order_by("-created_at")
+
+		# 商品ごとの申し込み数
+		product_counts = (
+			ProductApplication.objects.filter(product__in=my_products)
+			.values("product")
+			.annotate(apply_count=Count("apply_id"))
+		)
+
+		# 辞書化してアクセスしやすく
+		apply_count_dict = {item["product"]: item["apply_count"] for item in product_counts}
+
+		# 商品に属性としてセット
+		for product in product_list:
+			product.apply_count = apply_count_dict.get(product.item_id, 0)
+			statuses = []
+
+			if not product.valid and product.admin_comment:
+				statuses.append("rejected")
+			if product.valid:
+				statuses.append("approved")
+			if product.apply_count > 0:
+				statuses.append("received")
+			if product.valid == False and product.admin_comment is None and product.apply_count == 0:
+				statuses.append("registered")
+
+
+			product.status = statuses
+
+
+
+
+		summary = {
+			"registered": my_products.count(),
+			"approved": my_products.filter(valid=True).count(),
+			"rejected": my_products.filter(valid=False, admin_comment__isnull=False).count(),
+			"received": sum(apply_count_dict.values()),
+		}
+
+		received_list = (
+			ProductApplication.objects.filter(product__in=my_products)
+			.select_related("product", "user")
+			.order_by("-apply_time")
+		)
+
+	return render(request, "accounts/history.html", {
+		"role": role,
+		"summary": summary,
+		"applied_list": applied_list,
+		"completed_list": completed_list,
+    	"pending_list": pending_list, 
+		"received_list": received_list,
+		"product_list": product_list,
+	})
+
+
+
+
 

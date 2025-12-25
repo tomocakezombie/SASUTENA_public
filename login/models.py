@@ -36,3 +36,26 @@ class AccountRequest(models.Model):
 
     def __str__(self):
         return self.username
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="password_reset_tokens")
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def mark_used(self):
+        if not self.used_at:
+            self.used_at = timezone.now()
+            self.save(update_fields=["used_at"])
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    def is_valid(self):
+        return not self.used_at and not self.is_expired

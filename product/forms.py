@@ -4,10 +4,16 @@ from django import forms
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Product, ProductApplication, ProductComment
+from .models import Product, ProductApplication, ProductComment, TagType
 
 
 class ProductForm(forms.ModelForm):
+    tags = forms.ModelMultipleChoiceField(
+        label="タグ",
+        queryset=TagType.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": 6}),
+    )
     start_date = forms.DateField(
         label="受け渡し開始日",
         widget=forms.DateInput(attrs={"type": "date"}),
@@ -31,10 +37,20 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ["item_name", "number", "description", "item_image"]
+        fields = ["item_name", "number", "description", "item_image", "tags", "show_expiration_notice"]
+        widgets = {
+            "show_expiration_notice": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "show_expiration_notice": "締め切り間近通知に表示する",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["tags"].queryset = TagType.objects.order_by("tag_name")
+        if self.instance.pk:
+            self.fields["tags"].initial = self.instance.tags.values_list("pk", flat=True)
+
         text_inputs = [
             ("item_name", {"placeholder": "例：朝採れトマト10個入り"}),
             ("description", {"placeholder": "商品の状態や受渡条件、受け渡し場所などを記入", "rows": 4}),
@@ -56,6 +72,8 @@ class ProductForm(forms.ModelForm):
         self.fields["end_clock"].widget.attrs.update(time_attrs.copy())
 
         self.fields["item_image"].widget.attrs.update({"class": "form-control"})
+        if not self.fields["tags"].queryset.exists():
+            self.fields["tags"].widget.attrs["size"] = 1
 
         start_dt = getattr(self.instance, "start_time", None)
         if start_dt:
@@ -113,6 +131,7 @@ class ProductForm(forms.ModelForm):
         product.end_time = self.cleaned_data.get("end_time")
         if commit:
             product.save()
+            self.save_m2m()
         return product
 
 

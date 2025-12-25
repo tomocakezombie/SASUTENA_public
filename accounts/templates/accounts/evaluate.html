@@ -13,6 +13,9 @@
         {% endif %}
         <form method="post" class="vstack gap-3">
           {% csrf_token %}
+          {% if next_url %}
+          <input type="hidden" name="next" value="{{ next_url }}">
+          {% endif %}
           <div>
             {{ form.score.label_tag }}
             {{ form.score }}

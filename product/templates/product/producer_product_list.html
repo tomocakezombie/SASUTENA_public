@@ -4,6 +4,19 @@
 
 {% block content %}
 <section class="py-4">
+    {% if expiring_products %}
+    <div id="expiration-banner" class="alert py-2 px-3 mb-3" style="overflow:hidden; white-space:nowrap; background-color: {{ expiration_notice.bg_color }}; color: {{ expiration_notice.text_color }};">
+        <div id="expiring-content" style="display:inline-block; white-space:nowrap;">
+            {% for product in expiring_products %}
+                <span class="expiring-item" style="margin-right:50px;">
+                    {{ product.notice_message }}
+                </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+
     <div class="card border-0 shadow-sm mb-5">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
@@ -61,6 +74,20 @@
                                             <span class="badge bg-info text-dark">受付中</span>
                                         {% endif %}
                                     </div>
+                                    {% if product.user %}
+                                        <div class="d-flex align-items-center gap-2 text-muted small mb-2">
+                                            <span>出品者:</span>
+                                            <a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+                                                {% if product.owner_profile and product.owner_profile.icon_image %}
+                                                    <img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 28px; height: 28px; object-fit: cover;">
+                                                {% else %}
+                                                    <i class="bi bi-person-circle text-secondary" style="font-size: 1.6rem;"></i>
+                                                {% endif %}
+                                                <span class="fw-semibold text-muted">{{ product.user.username }}</span>
+                                                <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+                                            </a>
+                                        </div>
+                                    {% endif %}
                                     <ul class="list-unstyled mb-2 small text-muted">
                                         <li>数量: {{ product.number }}</li>
                                         <li>受け渡し期間: {{ product.start_time|date:'Y年n月j日' }} ～ {{ product.end_time|date:'Y年n月j日' }}</li>
@@ -71,11 +98,24 @@
                                     {% if product.admin_comment %}
                                         <p class="mb-2 small text-danger">コメント: {{ product.admin_comment }}</p>
                                     {% endif %}
-                                    <div class="d-flex flex-wrap gap-2">
-                                    {% comment %} 詳細ページ実装時にリンク先を差し替え {% endcomment %}
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
                                         <a class="btn btn-sm btn-outline-primary" href="{% url 'product:product_detail' product.pk %}">詳細を見る</a>
-                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'product:product_delete' product.pk %}">削除</a>
+                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'product:product_delete' product.pk %}" onclick="return confirm('本当に削除してよろしいですか？');">削除</a>
+                                        {% if not product.completed and product.valid and product.publish %}
+                                            <form method="post" action="{% url 'product:product_complete' product.pk %}" class="d-inline" onsubmit="return confirm('取引完了を通知します。よろしいですか？');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success">取引完了を通知</button>
+                                            </form>
+                                        {% endif %}
                                     </div>
+                                    {% if product.completed %}
+                                        <div class="mt-3 d-flex align-items-center gap-3">
+                                            <span class="btn btn-sm btn-success disabled mb-0">完了通知済み</span>
+                                            {% if product.completed_notified_at %}
+                                                <span class="small text-muted">{{ product.completed_notified_at|date:'Y/m/d H:i' }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </article>
@@ -113,7 +153,6 @@
                                 <div class="col">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                         <h3 class="h6 mb-0 fw-bold">{{ product.item_name }}</h3>
-                                        <span class="badge bg-light text-secondary">{{ product.user.username }}</span>
                                         {% if product.valid %}
                                             <span class="badge bg-success">承認済み</span>
                                         {% else %}
@@ -129,6 +168,18 @@
                                         {% else %}
                                             <span class="badge bg-info text-dark">受付中</span>
                                         {% endif %}
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 text-muted small mb-2">
+                                        <span>出品者:</span>
+                                        <a class="d-inline-flex align-items-center gap-2 text-decoration-none" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+                                            {% if product.owner_profile and product.owner_profile.icon_image %}
+                                                <img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 28px; height: 28px; object-fit: cover;">
+                                            {% else %}
+                                                <i class="bi bi-person-circle text-secondary" style="font-size: 1.6rem;"></i>
+                                            {% endif %}
+                                            <span class="badge bg-light text-secondary">{{ product.user.username }}</span>
+                                            <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+                                        </a>
                                     </div>
                                     <ul class="list-unstyled mb-2 small text-muted">
                                         <li>数量: {{ product.number }}</li>
@@ -152,4 +203,37 @@
         </div>
     </div>
 </section>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	const banner = document.getElementById('expiration-banner');
+    const content = document.getElementById('expiring-content');
+
+    if (!banner || !content) return;
+
+    let scrollSpeed =1.5; // スクロール速度を調整可能
+    let contentWidth = content.offsetWidth;
+
+    content.style.transform = `translateX(${banner.offsetWidth}px)`;
+
+    function scroll() {
+        const currentTransform = parseFloat(content.style.transform.replace('translateX(', '').replace('px)', ''));
+        const newTransform = currentTransform - scrollSpeed;
+
+        if (newTransform + contentWidth <= 0) {
+            content.style.transform = `translateX(${banner.offsetWidth}px)`; 
+        } else {
+            content.style.transform = `translateX(${newTransform}px)`; 
+        }
+
+        requestAnimationFrame(scroll);
+    }
+
+    scroll();
+});
+</script>
+
+
 {% endblock %}

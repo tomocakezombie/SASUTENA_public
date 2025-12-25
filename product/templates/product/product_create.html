@@ -79,18 +79,18 @@
                 <div class="text-danger small">{{ error }}</div>
                 {% endfor %}
             </div>
-
-           
             <div class="mb-4">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="fw-semibold">タグ</span>
-                    <span class="badge text-bg-light text-secondary">準備中</span>
-          
-                </div>
-                {% comment %}
-                <div class="form-text">タグ機能は近日公開予定です。しばらくお待ちください。</div>
+                <label for="{{ form.tags.id_for_label }}" class="form-label fw-semibold">タグ</label>
+                {{ form.tags }}
+                {% if form.tags.field.queryset.exists %}
+                <div class="form-text">Ctrl（⌘）キーを押しながらクリックすると複数選択できます。</div>
+                {% else %}
+                <div class="form-text text-muted">利用可能なタグがまだ登録されていません。</div>
+                {% endif %}
+                {% for error in form.tags.errors %}
+                <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
             </div>
-            {% endcomment %}
 
             <div class="mb-4">
                 <label for="{{ form.item_image.id_for_label }}" class="form-label fw-semibold">写真（任意）</label>
@@ -100,6 +100,13 @@
                 <div class="text-danger small">{{ error }}</div>
                 {% endfor %}
             </div>
+            <div class="form-check mb-4">
+                {{ form.show_expiration_notice }}
+                <label for="{{ form.show_expiration_notice.id_for_label }}" class="form-check-label">
+                    締め切り間近通知に表示する
+                </label>
+            </div>
+
 
             <div class="d-flex flex-column flex-sm-row gap-2">
                 <button type="submit" class="btn btn-primary">登録（管理者承認後に公開）</button>
