@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 from django.db.models import Q
 
 from accounts.models import UserProfile
@@ -103,6 +104,34 @@ def product_delete(request, pk):
 
     product.delete()
     return redirect('product:producer_product_list')
+
+
+@login_required
+@require_POST
+def product_complete(request, pk):
+    redirect_response = _redirect_for_role_mismatch(
+        request,
+        {"producer"},
+        "生産者専用のページです。",
+    )
+    if redirect_response:
+        return redirect_response
+
+    product = get_object_or_404(Product, pk=pk, user=request.user)
+
+    if product.completed:
+        messages.info(request, "すでに完了通知済みです。")
+        return redirect("product:producer_product_list")
+
+    if not (product.valid and product.publish):
+        messages.warning(request, "承認済みかつ公開中の商品だけ完了通知できます。")
+        return redirect("product:producer_product_list")
+
+    product.completed = True
+    product.completed_notified_at = timezone.now()
+    product.save(update_fields=["completed", "completed_notified_at"])
+    messages.success(request, f"{product.item_name} の取引完了を通知しました。")
+    return redirect("product:producer_product_list")
 
 @login_required
 def consumer_product_list(request):

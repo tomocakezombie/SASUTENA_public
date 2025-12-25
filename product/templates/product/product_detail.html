@@ -157,8 +157,9 @@
 								<div class="flex-grow-1">
 									<div class="d-flex flex-wrap align-items-center gap-2">
 										{% if is_owner %}
-											<a href="{% url 'accounts:profile_detail' application.user.username %}" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-2">
-												<span class="fw-semibold text-body">{{ application.user.username }}</span>
+											<a class="fw-semibold text-decoration-none"
+											   href="{% url 'comunicate:conversation_list' %}?user={{ application.user.username|urlencode }}&amp;item={{ product.pk }}">
+											{{ application.user.username }}
 											</a>
 										{% else %}
 											<span class="fw-semibold">
@@ -167,7 +168,7 @@
 												{% else %}
 													{{ application.user.username }}
 												{% endif %}
-											</span>
+											</span>	
 										{% endif %}
 										<span class="text-muted small">{{ application.apply_time|date:'Y/m/d H:i' }}</span>
 									</div>
