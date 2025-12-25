@@ -6,6 +6,12 @@
 {% block content %}
 <main class="py-4">
     <div class="container">
+                <style>
+                    .admin-scroll-panel {
+                        max-height: 60vh;
+                        overflow-y: auto;
+                    }
+                </style>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <div>
                 <h1 class="h4 mb-1">メッセージモニタ</h1>
@@ -49,7 +55,7 @@
                             </div>
                         </form>
                         {% if threads %}
-                            <div class="list-group list-group-flush">
+                            <div class="list-group list-group-flush admin-scroll-panel">
                                 {% for thread in threads %}
                                     {% with user_a=thread.user_a user_b=thread.user_b item=thread.item latest=thread.latest_message %}
                                         <a
