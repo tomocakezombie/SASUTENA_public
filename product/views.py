@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
+from .mentions import sync_comment_mentions
 
 @login_required
 def product_create(request):
@@ -64,7 +65,12 @@ def product_detail(request, pk):
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
     applications = product.applications.select_related('user')
-    comments = product.comments.filter(delete_flag=False).select_related('user')
+    comments = (
+        product.comments
+        .filter(delete_flag=False)
+        .select_related('user')
+        .prefetch_related('mentions__mentioned_user')
+    )
     user_application = applications.filter(user=request.user).first()
 
     can_apply = (
@@ -83,11 +89,12 @@ def product_detail(request, pk):
         if form_type == 'comment':
             comment_form = ProductCommentForm(request.POST)
             if comment_form.is_valid():
-                ProductComment.objects.create(
+                comment = ProductComment.objects.create(
                     product=product,
                     user=request.user,
                     content=comment_form.cleaned_data['content'],
                 )
+                sync_comment_mentions(comment)
                 messages.success(request, 'コメントを投稿しました。')
                 return redirect('product:product_detail', pk=product.pk)
         else:
@@ -137,6 +144,7 @@ def product_comment_update(request, comment_id):
         comment.content = form.cleaned_data['content']
         comment.edit_flag = True
         comment.save(update_fields=['content', 'edit_flag'])
+        sync_comment_mentions(comment)
         messages.success(request, 'コメントを更新しました。')
     else:
         messages.error(request, 'コメントの更新に失敗しました。内容を確認してください。')

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load product_tags %}
 
 {% block title %}商品詳細{% endblock %}
 
@@ -19,6 +20,31 @@
 
 		.comment-bubble-self .text-muted {
 			color: rgba(11, 60, 130, 0.7) !important;
+		}
+
+		.mention-link {
+			color: var(--bs-primary);
+			text-decoration: none;
+			font-weight: 600;
+		}
+
+		.mention-link:hover,
+		.mention-link:focus {
+			text-decoration: underline;
+		}
+
+		.mention-trigger {
+			background: none;
+			border: 0;
+			color: var(--bs-primary);
+			font-weight: 600;
+			padding: 0;
+		}
+
+		.mention-trigger:hover,
+		.mention-trigger:focus {
+			text-decoration: underline;
+			color: var(--bs-primary);
 		}
 	</style>
 {% endblock %}
@@ -153,7 +179,9 @@
 													{% if comment.user == user %}
 														あなた
 													{% else %}
-														{{ comment.user.username }}
+														<button type="button" class="mention-trigger" data-mention-username="{{ comment.user.username }}">
+															{{ comment.user.username }}
+														</button>
 													{% endif %}
 												</span>
 												<span class="text-muted small">{{ comment.comment_time|date:'Y/m/d H:i' }}</span>
@@ -181,7 +209,7 @@
 												</div>
 											{% endif %}
 										</div>
-										<p class="text-muted small mb-0">{{ comment.content|linebreaksbr }}</p>
+										<p class="text-muted small mb-0">{{ comment.content|render_mentions }}</p>
 									</div>
 								</div>
 							</div>
@@ -306,6 +334,47 @@
 					}
 				});
 			});
+			var mentionButtons = document.querySelectorAll('.mention-trigger');
+			var commentInput = document.getElementById('id_content');
+			var whitespacePattern = /\s$/;
+			mentionButtons.forEach(function (button) {
+				button.addEventListener('click', function (event) {
+					event.preventDefault();
+					if (!commentInput) {
+						return;
+					}
+					var username = button.getAttribute('data-mention-username');
+					if (!username) {
+						return;
+					}
+					insertMention(commentInput, username);
+				});
+			});
+
+			function insertMention(input, username) {
+				var mentionText = '@' + username;
+				var mentionSuffix = ' ';
+				var selectionStart = input.selectionStart || 0;
+				var selectionEnd = input.selectionEnd || 0;
+				var value = input.value || '';
+				var before = value.slice(0, selectionStart);
+				var after = value.slice(selectionEnd);
+				var prefix = '';
+				if (before && !whitespacePattern.test(before)) {
+					prefix = ' ';
+				}
+				if (after && !/^\s/.test(after)) {
+					after = ' ' + after;
+				}
+				var insertText = prefix + mentionText + mentionSuffix;
+				var nextCursor = before.length + insertText.length;
+				input.value = before + insertText + after;
+				input.focus();
+				if (typeof input.setSelectionRange === 'function') {
+					input.setSelectionRange(nextCursor, nextCursor);
+				}
+				input.dispatchEvent(new Event('input', { bubbles: true }));
+			}
 		});
 	</script>
 {% endblock %}

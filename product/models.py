@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Product(models.Model):
@@ -86,3 +87,24 @@ class ProductComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.user} on {self.product}"
+
+
+class ProductCommentMention(models.Model):
+    comment = models.ForeignKey(
+        ProductComment,
+        on_delete=models.CASCADE,
+        related_name="mentions",
+    )
+    mentioned_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mentioned_in_product_comments",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "product_productcommentmention"
+        unique_together = ("comment", "mentioned_user")
+
+    def __str__(self):
+        return f"{self.comment_id} -> {self.mentioned_user}"
