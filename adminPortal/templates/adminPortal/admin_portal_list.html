@@ -163,7 +163,7 @@
                                             却下する
                                         </button>
                                     {% endif %}
-                                    <a class="link" href="{% url 'product:product_detail' product.item_id %}">詳細</a>
+                                    <a class="link" href="{% url 'adminPortal:admin_product_detail' product.pk %}">詳細</a>
                                 </div>
                             </div>
                             {% if not product.rejected_at %}
