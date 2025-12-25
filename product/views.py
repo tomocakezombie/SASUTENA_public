@@ -11,6 +11,7 @@ from accounts.models import UserProfile
 
 from .forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from .models import Product, ProductApplication, ProductComment
+from .mentions import sync_comment_mentions
 
 from django.utils import timezone
 from datetime import timedelta
@@ -286,23 +287,14 @@ def product_detail(request, pk):
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
-    applications_qs = product.applications.select_related('user')
-    comments_qs = product.comments.filter(delete_flag=False).select_related('user')
-    user_application = applications_qs.filter(user=request.user).first()
-
-    applications = list(applications_qs.order_by('-apply_time'))
-    comments = list(comments_qs.order_by('-comment_time'))
-
-    related_user_ids = {product.user_id}
-    related_user_ids.update(application.user_id for application in applications)
-    related_user_ids.update(comment.user_id for comment in comments)
-    profile_map = _get_profiles_map(related_user_ids)
-
-    product.owner_profile = profile_map.get(product.user_id)
-    for application in applications:
-        application.user_profile = profile_map.get(application.user_id)
-    for comment in comments:
-        comment.user_profile = profile_map.get(comment.user_id)
+    applications = product.applications.select_related('user')
+    comments = (
+        product.comments
+        .filter(delete_flag=False)
+        .select_related('user')
+        .prefetch_related('mentions__mentioned_user')
+    )
+    user_application = applications.filter(user=request.user).first()
 
     can_apply = (
         (user_role in consumer_roles)
@@ -327,11 +319,12 @@ def product_detail(request, pk):
         if form_type == 'comment':
             comment_form = ProductCommentForm(request.POST)
             if comment_form.is_valid():
-                ProductComment.objects.create(
+                comment = ProductComment.objects.create(
                     product=product,
                     user=request.user,
                     content=comment_form.cleaned_data['content'],
                 )
+                sync_comment_mentions(comment)
                 messages.success(request, 'コメントを投稿しました。')
                 return redirect('product:product_detail', pk=product.pk)
         else:
@@ -381,6 +374,7 @@ def product_comment_update(request, comment_id):
         comment.content = form.cleaned_data['content']
         comment.edit_flag = True
         comment.save(update_fields=['content', 'edit_flag'])
+        sync_comment_mentions(comment)
         messages.success(request, 'コメントを更新しました。')
     else:
         messages.error(request, 'コメントの更新に失敗しました。内容を確認してください。')
