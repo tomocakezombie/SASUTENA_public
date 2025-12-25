@@ -13,6 +13,7 @@ class Product(models.Model):
     publish = models.BooleanField(default=False)
     valid = models.BooleanField(default=False)
     completed = models.BooleanField(default=False)
+    completed_notified_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     admin_comment = models.CharField(max_length=511, null=True, blank=True)
     rejected_at = models.DateTimeField(null=True, blank=True)
