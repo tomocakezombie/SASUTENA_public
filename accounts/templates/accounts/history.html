@@ -24,6 +24,15 @@
     font-size: 1.1rem;
     font-weight: 600;
 }
+/* 商品リストをスクロール可能にする */
+.scrollable-list {
+    max-height: 48vh; /* 画面高さに応じた最大高さ */
+    min-height: 160px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.scrollable-list::-webkit-scrollbar { width: 10px; }
+.scrollable-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 6px; }
 </style>
 {% endblock %}
 
@@ -114,7 +123,7 @@
             </div>
 
             <div class="card border-0 shadow-sm">
-                <div class="list-group list-group-flush" id="consumer-history-list">
+                <div class="list-group list-group-flush scrollable-list" id="consumer-history-list">
                     <!-- 取引成立 -->
                     {% if completed_list %}
                         {% for app in completed_list %}
@@ -359,7 +368,7 @@
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="list-group list-group-flush" id="producer-history-list">
+            <div class="list-group list-group-flush scrollable-list" id="producer-history-list">
             {% for product in product_list %}
             <article class="list-group-item py-3 px-3"
                 data-status="{{ product.status|join:',' }}"
