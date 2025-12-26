@@ -128,6 +128,18 @@ def conversation_list(request):
     priority_users = [user_map[pk] for pk in priority_user_ids if pk in user_map]
     rest_users = [u for u in all_users if u.pk not in priority_user_ids]
     ordered_users = priority_users + rest_users
+    
+    profiles = UserProfile.objects.filter(user__in=ordered_users)
+    profile_map = {p.user_id: p for p in profiles}
+
+    for u in ordered_users:
+        profile = profile_map.get(u.pk)
+        if profile and profile.nick_name:
+            u.display_name = profile.nick_name
+        else:
+            u.display_name = u.username
+
+
 
     for counterpart in ordered_users:
         combined_products = OrderedDict()
@@ -157,7 +169,13 @@ def conversation_list(request):
             else reverse("comunicate:conversation_detail", kwargs={"username": counterpart.username})
         )
 
-        preview_author = "あなた" if latest_message.send_user == user else latest_message.send_user.username
+        if latest_message.send_user == user:
+            preview_author = "あなた"
+        else:
+            sender = latest_message.send_user
+            profile = profile_map.get(sender.pk)
+            preview_author = profile.nick_name if profile and profile.nick_name else sender.username
+
 
         entry = user_threads.setdefault(
             counterpart.pk,
