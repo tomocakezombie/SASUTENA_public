@@ -81,7 +81,9 @@ def admin_portal_list(request):
     if not _ensure_admin(request.user):
         return redirect("login:index")
 
-    account_requests = AccountRequest.objects.order_by("-request_date").select_related()
+    base_requests = AccountRequest.objects.order_by("-request_date")
+    unverified_requests = base_requests.filter(is_verified=False)
+    verified_requests = base_requests.filter(is_verified=True)
     products = list(Product.objects.select_related("user").order_by("-created_at"))
     _attach_product_profiles(products)
 
@@ -89,7 +91,8 @@ def admin_portal_list(request):
         request,
         "adminPortal/admin_portal_list.html",
         {
-            "account_requests": account_requests,
+            "unverified_requests": unverified_requests,
+            "verified_requests": verified_requests,
             "products": products,
         },
     )

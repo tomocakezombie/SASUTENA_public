@@ -32,13 +32,43 @@
                             {% endif %}
                         </div>
 
-                        <div>
-                            <label class="form-label" for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
-                            {{ form.full_name }}
-                            {% if form.full_name.errors %}
-                                <div class="invalid-feedback d-block">{{ form.full_name.errors.0 }}</div>
-                            {% endif %}
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="{{ form.family_name.id_for_label }}">{{ form.family_name.label }}</label>
+                                {{ form.family_name }}
+                                {% if form.family_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.family_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="{{ form.given_name.id_for_label }}">{{ form.given_name.label }}</label>
+                                {{ form.given_name }}
+                                {% if form.given_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.given_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
                         </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="{{ form.family_name_kana.id_for_label }}">{{ form.family_name_kana.label }}</label>
+                                {{ form.family_name_kana }}
+                                {% if form.family_name_kana.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.family_name_kana.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="{{ form.given_name_kana.id_for_label }}">{{ form.given_name_kana.label }}</label>
+                                {{ form.given_name_kana }}
+                                {% if form.given_name_kana.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.given_name_kana.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-text">例: やまだ ／ たろう（ひらがなで入力してください）</div>
+
+                        {{ form.full_name }}
+                        {{ form.full_name_kana }}
 
                         <div>
                             <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>

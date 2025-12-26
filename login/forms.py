@@ -14,15 +14,16 @@ class CustomUserChangeForm(UserChangeForm):
         fields = ("username", "email", "role")
 
 class SignupForm(forms.ModelForm):
+    family_name = forms.CharField(label="姓", max_length=128)
+    given_name = forms.CharField(label="名", max_length=128)
+    family_name_kana = forms.CharField(label="せい（ふりがな）", max_length=128)
+    given_name_kana = forms.CharField(label="めい（ふりがな）", max_length=128)
     password = forms.CharField(widget=forms.PasswordInput, label="希望パスワード")
     confirm_password = forms.CharField(widget=forms.PasswordInput, label="確認用パスワード")
 
     class Meta:
         model = AccountRequest
-        fields = ["username", "full_name", "email", "role", "password"]
-        labels = {
-            "full_name": "氏名",
-        }
+        fields = ["username", "full_name", "full_name_kana", "email", "role", "password"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,9 +31,25 @@ class SignupForm(forms.ModelForm):
         if role_field:
             role_field.choices = [choice for choice in role_field.choices if choice[0] in {"producer", "consumer"}]
 
+        username_field = self.fields.get("username")
+        if username_field:
+            username_field.label = "ユーザーID"
+
         full_name_field = self.fields.get("full_name")
         if full_name_field:
-            full_name_field.required = True
+            full_name_field.required = False
+            full_name_field.widget = forms.HiddenInput()
+
+        full_name_kana_field = self.fields.get("full_name_kana")
+        if full_name_kana_field:
+            full_name_kana_field.required = False
+            full_name_kana_field.widget = forms.HiddenInput()
+
+        for name in ["family_name", "given_name", "family_name_kana", "given_name_kana"]:
+            field = self.fields.get(name)
+            if field:
+                field.widget.attrs.setdefault("class", "form-control")
+                field.widget.attrs.setdefault("placeholder", field.label)
 
         for name, field in self.fields.items():
             widget = field.widget
@@ -50,6 +67,16 @@ class SignupForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+        family_name = self.cleaned_data.get("family_name", "").strip()
+        given_name = self.cleaned_data.get("given_name", "").strip()
+        separator = " " if family_name and given_name else ""
+        instance.full_name = f"{family_name}{separator}{given_name}" or instance.full_name
+        family_name_kana = self.cleaned_data.get("family_name_kana", "").strip()
+        given_name_kana = self.cleaned_data.get("given_name_kana", "").strip()
+        separator_kana = " " if family_name_kana and given_name_kana else ""
+        instance.full_name_kana = (
+            f"{family_name_kana}{separator_kana}{given_name_kana}" or instance.full_name_kana
+        )
         if commit:
             instance.save()
         return instance
