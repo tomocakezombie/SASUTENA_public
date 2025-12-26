@@ -21,7 +21,14 @@
             <i class="bi bi-person-circle text-secondary" style="font-size:72px;"></i>
             {% endif %}
           </div>
-          <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:user_obj.username }} さん</h1>
+          {% if profile.nick_name %}
+            <h1 class="h4 mb-0">{{ profile.nick_name }} さん</h1>
+            <p class="small text-muted mb-1">@{{ user_obj.username }}</p>
+          {% else %}
+            <h1 class="h4 mb-1">{{ user_obj.username }} さん</h1>
+            <p class="small text-muted mb-1">@{{ user_obj.username }}</p>
+          {% endif %}
+
           <p class="small text-muted mb-2">
             ロール:
             {% if user_obj.role == "producer" %}

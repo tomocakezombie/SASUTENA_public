@@ -187,7 +187,7 @@ def admin_message_monitor(request):
 
     messages_qs = (
         Message.objects.filter(delete_flag=False)
-        .select_related("send_user", "receive_user", "item")
+        .select_related("send_user", "send_user__profile","receive_user", "receive_user__profile","item")
         .order_by("-send_time")
     )
 
@@ -195,8 +195,10 @@ def admin_message_monitor(request):
         messages_qs = messages_qs.filter(
             Q(send_user__username__icontains=search_query)
             | Q(send_user__email__icontains=search_query)
+            | Q(send_user__profile__nick_name__icontains=search_query)
             | Q(receive_user__username__icontains=search_query)
             | Q(receive_user__email__icontains=search_query)
+            | Q(receive_user__profile__nick_name__icontains=search_query)
             | Q(message_content__icontains=search_query)
             | Q(item__item_name__icontains=search_query)
         )
@@ -276,7 +278,7 @@ def admin_message_monitor(request):
 
                 thread_messages = (
                     Message.objects.filter(thread_filters)
-                    .select_related("send_user", "receive_user", "item")
+                    .select_related("send_user", "send_user__profile","receive_user","receive_user__profile", "item")
                     .order_by("send_time")
                 )
 

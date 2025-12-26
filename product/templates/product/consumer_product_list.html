@@ -146,14 +146,14 @@
 							<div class="d-flex flex-wrap align-items-center gap-3">
 								<div class="d-flex align-items-center gap-2 text-muted small">
 									<span>出品者：</span>
-									<a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+									<a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.owner_profile.nick_name|default:product.user.username }} のマイページ">
 										{% if product.owner_profile and product.owner_profile.icon_image %}
 											<img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
 										{% else %}
 											<i class="bi bi-person-circle fs-4 text-secondary"></i>
 										{% endif %}
-										<span class="fw-semibold text-muted">{{ product.user.username }}</span>
-										<span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+										<span class="fw-semibold text-muted">{{ product.owner_profile.nick_name|default:product.user.username }}</span>
+										<span class="visually-hidden">{{ product.owner_profile.nick_name|default:product.user.username }}のマイページへ</span>
 									</a>
 								</div>
 								<a class="btn btn-link p-0" href="{% url 'product:product_detail' product.pk %}">詳細／申込み</a>
