@@ -19,11 +19,14 @@ class CustomUser(AbstractUser):
 # 新規アカウント作成時のリクエスト
 class AccountRequest(models.Model):
     username = models.CharField(max_length=150)
+    full_name = models.CharField(max_length=255, blank=True, verbose_name="氏名")
     email = models.EmailField()
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="consumer")
     password = models.CharField(max_length=128)
     request_date = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False, verbose_name="メール認証済み")
     is_approved = models.BooleanField(default=False)
+    full_name_kana = models.CharField(max_length=255, blank=True, verbose_name="氏名（かな）")
     verification_code = models.CharField(max_length=6, blank=True, null=True)
     verification_expires_at = models.DateTimeField(blank=True, null=True)
 

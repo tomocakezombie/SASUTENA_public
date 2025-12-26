@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% load product_tags %}
+
+{% block title %}商品管理詳細{% endblock %}
+
+{% block content %}
+<main class="py-4">
+  <div class="container">
+    <style>
+      .admin-scroll-panel {
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      .admin-meta-tile {
+        border-radius: 0.75rem;
+      }
+    </style>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+      <div>
+        <h1 class="h4 mb-1">商品管理詳細</h1>
+        <p class="small text-muted mb-0">公開状況や管理メモを含めて出品内容を確認できます。</p>
+      </div>
+      <a href="{% url 'adminPortal:admin_portal_list' %}" class="btn btn-outline-secondary btn-sm">一覧へ戻る</a>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <div class="row g-4 align-items-start">
+              <div class="col-12 col-md-5">
+                {% if product.item_image %}
+                  <img src="{{ product.item_image.url }}" alt="{{ product.item_name }}" class="img-fluid rounded-4 w-100 object-fit-cover" style="max-height: 240px;">
+                {% else %}
+                  <div class="bg-light border rounded-4 d-flex align-items-center justify-content-center text-muted" style="height: 240px;">
+                    画像は登録されていません
+                  </div>
+                {% endif %}
+              </div>
+              <div class="col-12 col-md-7">
+                <div class="d-flex flex-column gap-2 mb-3">
+                  <h2 class="h4 mb-0">{{ product.item_name }}</h2>
+                  <div class="small text-muted d-flex flex-wrap align-items-center gap-2">
+                    <span class="fw-semibold">出品者:</span>
+                    <a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.user.username }} のマイページ">
+                      {% if product.owner_profile and product.owner_profile.icon_image %}
+                        <img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
+                      {% else %}
+                        <i class="bi bi-person-circle fs-4 text-secondary"></i>
+                      {% endif %}
+                      <span class="fw-semibold">{{ product.user.username }}</span>
+                      <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
+                    </a>
+                    {% if product.created_at %}
+                      <span class="ms-auto">登録日: {{ product.created_at|date:'Y/m/d H:i' }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <dl class="row g-2 mb-0 small text-muted">
+                  <dt class="col-sm-4 mb-0">数量</dt>
+                  <dd class="col-sm-8 fw-semibold mb-0 text-dark">{{ product.number|default:"-" }}</dd>
+                  <dt class="col-sm-4 mb-0">受け渡し期間</dt>
+                  <dd class="col-sm-8 fw-semibold mb-0 text-dark">
+                    {% if product.start_time and product.end_time %}
+                      {{ product.start_time|date:'Y/m/d H:i' }} 〜 {{ product.end_time|date:'Y/m/d H:i' }}
+                    {% elif product.start_time %}
+                      {{ product.start_time|date:'Y/m/d H:i' }}
+                    {% elif product.end_time %}
+                      {{ product.end_time|date:'Y/m/d H:i' }}
+                    {% else %}
+                      未設定
+                    {% endif %}
+                  </dd>
+                  <dt class="col-sm-4 mb-0">タグ</dt>
+                  <dd class="col-sm-8 fw-semibold mb-0 text-dark">
+                    {% with product.tags.all as tag_list %}
+                      {% if tag_list %}
+                        <div class="d-flex flex-wrap gap-2">
+                          {% for tag in tag_list %}
+                            <span class="badge text-bg-light text-secondary fw-normal">#{{ tag.tag_name }}</span>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <span class="text-muted">未設定</span>
+                      {% endif %}
+                    {% endwith %}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+            <hr>
+            <p class="mb-0">{{ product.description|default:"商品説明は登録されていません。" }}</p>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h3 class="h6 mb-3">申込み一覧 <span class="badge rounded-pill text-bg-secondary">{{ applications|length }}</span></h3>
+            {% if applications %}
+              <div class="admin-scroll-panel">
+                <ul class="list-unstyled mb-0">
+                  {% for application in applications %}
+                    <li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
+                      <div class="d-flex align-items-start gap-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;">
+                          {% if application.user_profile and application.user_profile.icon_image %}
+                            <img src="{{ application.user_profile.icon_image.url }}" alt="{{ application.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
+                          {% else %}
+                            <i class="bi bi-person-circle fs-3 text-secondary"></i>
+                          {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="d-flex flex-wrap align-items-center gap-2">
+                            <a class="fw-semibold text-decoration-none" href="{% url 'accounts:profile_detail' application.user.username %}">{{ application.user.username }}</a>
+                            <span class="text-muted small">{{ application.apply_time|date:'Y/m/d H:i' }}</span>
+                            <span class="badge text-bg-{{ application.badge_class }}">{{ application.get_apply_status_display }}</span>
+                          </div>
+                          <div class="text-muted small mt-1">数量: {{ application.quantity }}{% if application.hope_time %} / 希望日時: {{ application.hope_time|date:'Y/m/d H:i' }}{% endif %}</div>
+                          {% if application.message %}
+                            <p class="small mb-0 mt-1">{{ application.message }}</p>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">申込みはまだありません。</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <h3 class="h6 mb-3">コメント <span class="badge rounded-pill text-bg-secondary">{{ comments|length }}</span></h3>
+            {% if comments %}
+              <div class="admin-scroll-panel">
+                <ul class="list-unstyled mb-0">
+                  {% for comment in comments %}
+                    <li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
+                      <div class="d-flex align-items-start gap-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;">
+                          {% if comment.user_profile and comment.user_profile.icon_image %}
+                            <img src="{{ comment.user_profile.icon_image.url }}" alt="{{ comment.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
+                          {% else %}
+                            <i class="bi bi-person-circle fs-3 text-secondary"></i>
+                          {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="d-flex flex-wrap align-items-center gap-2">
+                            <a class="fw-semibold text-decoration-none" href="{% url 'accounts:profile_detail' comment.user.username %}">{{ comment.user.username }}</a>
+                            <span class="text-muted small">{{ comment.comment_time|date:'Y/m/d H:i' }}</span>
+                            {% if comment.edit_flag %}
+                              <span class="badge text-bg-secondary">編集済み</span>
+                            {% endif %}
+                          </div>
+                          <p class="small mb-0">{{ comment.content|render_mentions }}</p>
+                        </div>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">コメントはまだありません。</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <h2 class="h6 mb-3">管理情報</h2>
+            <div class="vstack gap-3">
+              <div class="p-3 bg-body-tertiary admin-meta-tile">
+                <div class="small text-muted mb-1">公開状態</div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                  {% if product.publish %}
+                    <span class="badge text-bg-primary">公開中</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">非公開</span>
+                  {% endif %}
+                  {% if product.valid %}
+                    <span class="badge text-bg-success">承認済み</span>
+                  {% else %}
+                    <span class="badge text-bg-warning text-dark">承認待ち</span>
+                  {% endif %}
+                  {% if product.completed %}
+                    <span class="badge text-bg-dark">受け渡し完了</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="p-3 bg-body-tertiary admin-meta-tile">
+                <div class="small text-muted mb-1">通知 / 取引状況</div>
+                <ul class="list-unstyled mb-0 small text-muted">
+                  <li>締め切り通知: {% if product.show_expiration_notice %}表示対象{% else %}非表示{% endif %}</li>
+                  <li>完了通知日時: {% if product.completed_notified_at %}{{ product.completed_notified_at|date:'Y/m/d H:i' }}{% else %}未通知{% endif %}</li>
+                </ul>
+              </div>
+              <div class="p-3 bg-body-tertiary admin-meta-tile">
+                <div class="small text-muted mb-1">管理メモ</div>
+                {% if product.admin_comment %}
+                  <p class="small mb-0">{{ product.admin_comment }}</p>
+                {% else %}
+                  <p class="small text-muted mb-0">登録されたメモはありません。</p>
+                {% endif %}
+                {% if product.rejected_at %}
+                  <p class="small text-danger mb-0 mt-2">却下日時: {{ product.rejected_at|date:'Y/m/d H:i' }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

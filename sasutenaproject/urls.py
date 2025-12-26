@@ -36,7 +36,6 @@ urlpatterns = [
     path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
     
     # ログイン後の画面
-    path('dashboard/', include('dashboard.urls')),
     path('product/', include(('product.urls', 'product'), namespace='product')),
     path('messages/', include(('comunicate.urls', 'comunicate'), namespace='comunicate')),
     path('admin-portal/', include(('adminPortal.urls', 'adminPortal'), namespace='adminPortal')),

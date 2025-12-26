@@ -41,38 +41,92 @@
                 >
                     ▼ 一覧を開く
                 </button>
-                <div id="requests" class="d-flex flex-column gap-3 collapse-panel d-none admin-scroll-panel">
-                    {% if account_requests %}
-                        {% for request in account_requests %}
-                            <div class="item d-flex flex-column flex-md-row gap-3 border rounded p-3">
-                                <div class="flex-grow-1">
-                                    <strong>{{ request.username }}</strong>
-                                    <div class="small text-muted">
-                                        申請ロール: {{ request.get_role_display }} ・ 状態:
-                                        {% if request.is_approved %}
-                                            <span class="badge text-bg-success">承認済</span>
-                                        {% else %}
-                                            <span class="badge text-bg-secondary">承認待ち</span>
-                                        {% endif %}
+                <div id="requests" class="d-flex flex-column gap-4 collapse-panel d-none admin-scroll-panel">
+                    <section>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h3 class="h6 text-muted mb-0">メール認証待ち</h3>
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                type="button"
+                                data-toggle-target="#unverified-request-list"
+                                data-label-open="▼ メール認証待ちを表示"
+                                data-label-close="▲ メール認証待ちを隠す"
+                                aria-controls="unverified-request-list"
+                            >
+                                ▼ メール認証待ちを表示
+                            </button>
+                        </div>
+                        <div id="unverified-request-list" class="d-none">
+                            {% if unverified_requests %}
+                                <div class="d-flex flex-column gap-3">
+                                    {% for request in unverified_requests %}
+                                        <div class="item d-flex flex-column flex-md-row gap-3 border rounded p-3">
+                                            <div class="flex-grow-1">
+                                                <strong>{{ request.username }}</strong>
+                                                {% if request.full_name %}
+                                                    <div class="small text-muted">氏名: {{ request.full_name }}</div>
+                                                {% endif %}
+                                                <div class="small text-muted">
+                                                    メール認証: <span class="badge text-bg-warning text-dark">未完了</span>
+                                                </div>
+                                                <div class="small text-muted">申請ロール: {{ request.get_role_display }}</div>
+                                                <div class="small text-muted">申請日時: {{ request.request_date|date:"Y/m/d H:i" }}</div>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:profile_detail' request.username %}">詳細を見る</a>
+                                                <span class="badge text-bg-secondary">メール認証待ち</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">メール認証を完了していない申請はありません。</p>
+                            {% endif %}
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="h6 text-muted mb-3">メール認証済み</h3>
+                        {% if verified_requests %}
+                            <div class="d-flex flex-column gap-3">
+                                {% for request in verified_requests %}
+                                    <div class="item d-flex flex-column flex-md-row gap-3 border rounded p-3">
+                                        <div class="flex-grow-1">
+                                            <strong>{{ request.username }}</strong>
+                                            {% if request.full_name %}
+                                                <div class="small text-muted">氏名: {{ request.full_name }}</div>
+                                            {% endif %}
+                                            <div class="small text-muted">
+                                                メール認証: <span class="badge text-bg-success">完了</span>
+                                            </div>
+                                            <div class="small text-muted">
+                                                申請ロール: {{ request.get_role_display }} ・ 状態:
+                                                {% if request.is_approved %}
+                                                    <span class="badge text-bg-success">承認済</span>
+                                                {% else %}
+                                                    <span class="badge text-bg-secondary">承認待ち</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="small text-muted">申請日時: {{ request.request_date|date:"Y/m/d H:i" }}</div>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:profile_detail' request.username %}">詳細を見る</a>
+                                            {% if not request.is_approved %}
+                                                <form method="post" action="{% url 'adminPortal:approve_account_request' request.pk %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-success btn-sm">承認する</button>
+                                                </form>
+                                            {% else %}
+                                                <span class="badge text-bg-success">承認済み</span>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                    <div class="small text-muted">申請日時: {{ request.request_date|date:"Y/m/d H:i" }}</div>
-                                </div>
-                                <div class="d-flex flex-wrap gap-2 align-items-center">
-                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:profile_detail' request.username %}">詳細を見る</a>
-                                    {% if not request.is_approved %}
-                                        <form method="post" action="{% url 'adminPortal:approve_account_request' request.pk %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-success btn-sm">承認する</button>
-                                        </form>
-                                    {% else %}
-                                        <span class="badge text-bg-success">承認済み</span>
-                                    {% endif %}
-                                </div>
+                                {% endfor %}
                             </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-muted mb-0">現在処理すべき利用申請はありません。</p>
-                    {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">メール認証を完了した申請はまだありません。</p>
+                        {% endif %}
+                    </section>
                 </div>
             </div>
         </div>
@@ -172,7 +226,7 @@
                                             却下する
                                         </button>
                                     {% endif %}
-                                    <a class="link" href="{% url 'product:product_detail' product.item_id %}">詳細</a>
+                                    <a class="link" href="{% url 'adminPortal:admin_product_detail' product.pk %}">詳細</a>
                                 </div>
                             </div>
                             {% if not product.rejected_at %}

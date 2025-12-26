@@ -99,6 +99,10 @@ class VerifySignupView(FormView):
             form.add_error("code", "認証コードの有効期限が切れています。再度申請してください。")
             return self.form_invalid(form)
 
+        if account_request.is_verified:
+            form.add_error(None, "この申請は既にメール認証が完了しています。")
+            return self.form_invalid(form)
+
         if CustomUser.objects.filter(username=account_request.username).exists():
             form.add_error(None, "このユーザー名は既に登録されています。")
             return self.form_invalid(form)
@@ -110,21 +114,24 @@ class VerifySignupView(FormView):
             password=account_request.password, # create_userを使うとハッシュ化されます
             role=account_request.role,
             is_active=False,
+            first_name=account_request.full_name,
         )
 
         # 2. accountsアプリの UserProfile を作成して紐付け
         UserProfile.objects.create(
             user=new_user,
+            name=account_request.full_name,
             nick_name=account_request.username,
             publish_profile=True,
             mail_allow=True
         )
 
         # 3. リクエスト済みデータのクリーンアップ
+        account_request.is_verified = True
         account_request.is_approved = False
-        account_request.save()
-        
-        account_request.save(update_fields=["is_approved", "verification_code", "verification_expires_at"])
+        account_request.verification_code = None
+        account_request.verification_expires_at = None
+        account_request.save(update_fields=["is_verified", "is_approved", "verification_code", "verification_expires_at"])
         self.request.session.pop("pending_email", None)
         messages.success(self.request, "アカウント登録申請が完了しました。\n 管理者が承認次第、ログイン可能になります。")
         success_url = reverse_lazy("login:index")  
