@@ -4,6 +4,12 @@
 
 {% block content %}
 <div class="py-4">
+        <style>
+            .admin-scroll-panel {
+                max-height: 60vh;
+                overflow-y: auto;
+            }
+        </style>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h1 class="h4 mb-1">タグ管理</h1>
@@ -39,7 +45,7 @@
                 <div class="card-body">
                     <h2 class="h5 mb-3">登録済みタグ</h2>
                     {% if tag_list %}
-                        <div class="table-responsive">
+                        <div class="table-responsive admin-scroll-panel">
                             <table class="table align-middle mb-0">
                                 <thead>
                                     <tr>

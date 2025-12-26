@@ -31,11 +31,13 @@
           <button type="button"
                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-start conversation-user"
                   data-username="{{ entry.counterpart.username }}"
+                  data-display-name="{{ entry.counterpart.display_name }}"
                   data-user-id="{{ entry.counterpart.pk }}"
                   data-initial-thread-url="{% if first_thread %}{{ first_thread.thread_url }}{% endif %}"
-                  data-role="{{ entry.counterpart.get_role_display }}">
+                  data-role="{{ entry.counterpart.get_role_display }}"
+          >
             <div class="me-3">
-              <div class="fw-semibold">{{ entry.counterpart.username }}</div>
+              <div class="fw-semibold">{{ entry.counterpart.display_name }}</div>
               <div class="small text-muted conversation-user__thread">
                 {% if first_thread %}
                   スレッド: {% if first_thread.item %}{{ first_thread.item.item_name }}{% else %}商品指定なし{% endif %}
@@ -90,7 +92,7 @@
             会話相手を選択してください
           </h2>
           <div class="small text-muted" id="conversationSubtitle">
-            左のリストからユーザーを選択してください。
+            リストからユーザーを選択してください。
           </div>
         </div>
 
@@ -660,7 +662,12 @@
       ? thread.dataset.itemName.trim()
       : '商品指定なし';
     if (counterpart) {
-      titleEl.textContent = counterpart + ' さんとの会話';
+      const displayName =
+        document.querySelector(
+          `.conversation-user[data-username="${counterpart}"]`
+        )?.dataset.displayName || counterpart;
+
+      titleEl.textContent = displayName + ' さんとの会話';
       subtitleEl.textContent = 'スレッド: ' + itemName;
     }
 
@@ -701,9 +708,10 @@
     selectedUserButton = button;
     setActiveUser(button);
     const username = button.dataset.username;
+    const displayName = button.dataset.displayName || username;
     const threadUrl = opts.autoThreadUrl || button.dataset.initialThreadUrl || '';
     showThreadGroup(username);
-    titleEl.textContent = username + ' さんとの会話';
+    titleEl.textContent = displayName + ' さんとの会話';
     subtitleEl.textContent = 'トークを選択してください。';
     clearConversation(username);
 
@@ -711,7 +719,7 @@
     if (profileButton) {
       const template = profileButton.dataset.profileUrlTemplate;
       profileButton.href = template.replace('__USERNAME__', username);
-      profileButton.textContent = `${username} のプロフィール`;
+      profileButton.textContent = `${displayName} のプロフィール`;
       profileButton.classList.remove('d-none');
     }
 
@@ -731,8 +739,14 @@
     const term = userSearchInput.value.trim().toLowerCase();
     const users = userList.querySelectorAll('.conversation-user');
     users.forEach(user => {
-      const username = user.dataset.username.toLowerCase();
-      user.classList.toggle('d-none', term !== '' && !username.includes(term));
+      const displayName = (user.dataset.displayName || '').toLowerCase();
+      const username = (user.dataset.username || '').toLowerCase();
+
+      // ニックネーム or username のどちらでもヒット
+      const hit =
+        displayName.includes(term) || username.includes(term);
+
+      user.classList.toggle('d-none', term !== '' && !hit);
     });
   }
 

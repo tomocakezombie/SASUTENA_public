@@ -3,6 +3,12 @@
 {% block title %}出品管理{% endblock %}
 
 {% block content %}
+<style>
+    .product-list-scroll {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+</style>
 <section class="py-4">
     {% if expiring_products %}
     <div id="expiration-banner" class="alert py-2 px-3 mb-3" style="overflow:hidden; white-space:nowrap; background-color: {{ expiration_notice.bg_color }}; color: {{ expiration_notice.text_color }};">
@@ -22,7 +28,7 @@
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
                 <div>
                     <p class="text-muted small mb-1">ログイン中</p>
-                    <h1 class="h4 fw-bold mb-2">{{ request.user.username }} さん</h1>
+                    <h1 class="h4 fw-bold mb-2">{{ user.profile.nick_name|default:user.username }} さん</h1>
                     <p class="text-muted mb-0">生産者向けダッシュボードです。新しい出品登録や進行中の申込状況をここで確認できます。</p>
                 </div>
                 <div class="ms-md-auto d-flex gap-2">
@@ -42,9 +48,9 @@
                 <span class="text-muted small">全 {{ my_products|length }} 件</span>
             </div>
         </div>
-        <div class="card-body p-0">
-            {% if my_products %}
-                <div class="list-group list-group-flush">
+                <div class="card-body p-0">
+                    {% if my_products %}
+                        <div class="list-group list-group-flush product-list-scroll">
                     {% for product in my_products %}
                         <article class="list-group-item py-4 px-3">
                             <div class="row g-3 align-items-start">
@@ -83,7 +89,7 @@
                                                 {% else %}
                                                     <i class="bi bi-person-circle text-secondary" style="font-size: 1.6rem;"></i>
                                                 {% endif %}
-                                                <span class="fw-semibold text-muted">{{ product.user.username }}</span>
+                                                <span class="fw-semibold text-muted">{{ product.owner_profile.nick_name|default:product.user.username }}</span>
                                                 <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
                                             </a>
                                         </div>
@@ -139,7 +145,7 @@
         </div>
         <div class="card-body p-0">
             {% if all_products %}
-                <div class="list-group list-group-flush">
+                <div class="list-group list-group-flush product-list-scroll">
                     {% for product in all_products %}
                         <article class="list-group-item py-4 px-3">
                             <div class="row g-3 align-items-start">
@@ -177,7 +183,7 @@
                                             {% else %}
                                                 <i class="bi bi-person-circle text-secondary" style="font-size: 1.6rem;"></i>
                                             {% endif %}
-                                            <span class="badge bg-light text-secondary">{{ product.user.username }}</span>
+                                            <span class="fw-semibold text-muted">{{ product.owner_profile.nick_name|default:product.user.username }}</span>
                                             <span class="visually-hidden">{{ product.user.username }} のマイページへ</span>
                                         </a>
                                     </div>

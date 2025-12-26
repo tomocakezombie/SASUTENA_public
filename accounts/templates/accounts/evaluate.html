@@ -35,7 +35,11 @@
           </div>
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">評価を保存</button>
+            {% if next_url %}
+            <a href="{% url 'accounts:profile_detail' target_user.username %}?next={{ next_url|urlencode }}" class="btn btn-outline-secondary">戻る</a>
+            {% else %}
             <a href="{% url 'accounts:profile_detail' target_user.username %}" class="btn btn-outline-secondary">戻る</a>
+            {% endif %}
           </div>
         </form>
       </div>

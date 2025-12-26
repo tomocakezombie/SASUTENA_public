@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from login.models import AccountRequest
-from product.models import Product, TagType
+from product.models import Product, TagType, ProductApplication
 from accounts.models import UserEvaluation, UserProfile
 from accounts.views import build_status_rows
 from comunicate.models import Message
@@ -82,7 +82,9 @@ def admin_portal_list(request):
     if not _ensure_admin(request.user):
         return redirect("login:index")
 
-    account_requests = AccountRequest.objects.order_by("-request_date").select_related()
+    base_requests = AccountRequest.objects.order_by("-request_date")
+    unverified_requests = base_requests.filter(is_verified=False)
+    verified_requests = base_requests.filter(is_verified=True)
     products = list(Product.objects.select_related("user").order_by("-created_at"))
     _attach_product_profiles(products)
 
@@ -90,8 +92,65 @@ def admin_portal_list(request):
         request,
         "adminPortal/admin_portal_list.html",
         {
-            "account_requests": account_requests,
+            "unverified_requests": unverified_requests,
+            "verified_requests": verified_requests,
             "products": products,
+        },
+    )
+
+
+@login_required
+def admin_product_detail(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    product = get_object_or_404(
+        Product.objects.select_related("user").prefetch_related("tags"), pk=pk
+    )
+
+    _attach_product_profiles([product])
+
+    applications = list(
+        product.applications.select_related("user").order_by("-apply_time")
+    )
+    comments = list(
+        product.comments.filter(delete_flag=False)
+        .select_related("user")
+        .prefetch_related("mentions__mentioned_user")
+        .order_by("-comment_time")
+    )
+
+    participant_ids = {product.user_id}
+    participant_ids.update(application.user_id for application in applications)
+    participant_ids.update(comment.user_id for comment in comments)
+
+    profile_map = {}
+    if participant_ids:
+        profiles = UserProfile.objects.filter(user_id__in=participant_ids).select_related("user")
+        profile_map = {profile.user_id: profile for profile in profiles}
+
+    product.owner_profile = profile_map.get(product.user_id)
+    for application in applications:
+        application.user_profile = profile_map.get(application.user_id)
+    for comment in comments:
+        comment.user_profile = profile_map.get(comment.user_id)
+
+    status_badges = {
+        ProductApplication.STATUS_PENDING: "secondary",
+        ProductApplication.STATUS_APPROVED: "success",
+        ProductApplication.STATUS_DECLINED: "danger",
+        ProductApplication.STATUS_CANCELLED: "warning",
+    }
+    for application in applications:
+        application.badge_class = status_badges.get(application.apply_status, "secondary")
+
+    return render(
+        request,
+        "adminPortal/admin_product_detail.html",
+        {
+            "product": product,
+            "applications": applications,
+            "comments": comments,
         },
     )
 
@@ -132,7 +191,7 @@ def admin_message_monitor(request):
 
     messages_qs = (
         Message.objects.filter(delete_flag=False)
-        .select_related("send_user", "receive_user", "item")
+        .select_related("send_user", "send_user__profile","receive_user", "receive_user__profile","item")
         .order_by("-send_time")
     )
 
@@ -140,8 +199,10 @@ def admin_message_monitor(request):
         messages_qs = messages_qs.filter(
             Q(send_user__username__icontains=search_query)
             | Q(send_user__email__icontains=search_query)
+            | Q(send_user__profile__nick_name__icontains=search_query)
             | Q(receive_user__username__icontains=search_query)
             | Q(receive_user__email__icontains=search_query)
+            | Q(receive_user__profile__nick_name__icontains=search_query)
             | Q(message_content__icontains=search_query)
             | Q(item__item_name__icontains=search_query)
         )
@@ -221,7 +282,7 @@ def admin_message_monitor(request):
 
                 thread_messages = (
                     Message.objects.filter(thread_filters)
-                    .select_related("send_user", "receive_user", "item")
+                    .select_related("send_user", "send_user__profile","receive_user","receive_user__profile", "item")
                     .order_by("send_time")
                 )
 

@@ -101,12 +101,12 @@
             </div>
 
             <div class="col-12 col-md-6">
-              <a href="history.html" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
+              <a href="{% url 'adminPortal:manage_tags' %}" class="card h-100 link-card border-0 shadow-sm text-reset text-decoration-none">
                 <div class="card-body d-flex align-items-start gap-3">
-                  <span class="link-icon link-icon-warning"><i class="bi bi-clock-history"></i></span>
+                  <span class="link-icon link-icon-info"><i class="bi bi-tags"></i></span>
                   <div>
-                    <div class="fw-semibold mb-1">過去の取引履歴</div>
-                    <div class="small text-muted mb-0">申込みや受け取りなどの履歴を確認します。</div>
+                    <div class="fw-semibold mb-1">タグ一覧の管理</div>
+                    <div class="small text-muted mb-0">登録済みタグの閲覧と編集に移動します。</div>
                   </div>
                 </div>
               </a>

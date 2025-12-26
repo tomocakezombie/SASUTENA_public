@@ -12,7 +12,17 @@
 <main class="py-5">
     <div class="container">
         <div class="d-flex justify-content-end mb-3">
-            <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="javascript:history.back()">
+            {% if back_url %}
+                <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{{ back_url }}">
+            {% else %}
+                {% if request.user.role == "producer" %}
+                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:producer_product_list' %}">
+                {% elif request.user.role == "consumer" %}
+                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:consumer_product_list' %}">
+                {% else %}
+                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:consumer_product_list' %}">
+                {% endif %}
+            {% endif %}
                 <span class="ms-1">戻る</span>
             </a>
         </div>
@@ -26,7 +36,15 @@
                         <i class="bi bi-person-circle text-secondary" style="font-size:72px;"></i>
                         {% endif %}
                     </div>
-                    <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:target_user.username }} さん</h1>
+                    <!-- <h1 class="h4 mb-1">{{ profile.nick_name|default:profile.name|default:target_user.username }} さん</h1> -->
+                    {% if profile.nick_name %}
+                        <h1 class="h4 mb-0">{{ profile.nick_name }} さん</h1>
+                        <p class="small text-muted mb-2">@{{ target_user.username }}</p>
+                    {% else %}
+                        <h1 class="h4 mb-0">{{ target_user.username }} さん</h1>
+                        <p class="small text-muted mb-2">@{{ target_user.username }}</p>
+                    {% endif %}
+
                     <p class="small text-muted mb-2">
                         ロール:
                         {% if target_user.role == "producer" %}
@@ -58,10 +76,15 @@
                     {% endif %}
                     {% if request.user.is_authenticated and request.user.username != target_user.username %}
                     <div class="d-flex justify-content-center gap-2">
-                        <a href="{% url 'accounts:evaluate' target_user.username %}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
-                            <i class="bi bi-star"></i><span class="ms-1">評価する</span>
-                        </a>
-                    </div>
+                            {% url 'accounts:evaluate' target_user.username as evaluate_url %}
+                            {% if back_url %}
+                                <a href="{{ evaluate_url }}?next={{ back_url|urlencode }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                            {% else %}
+                                <a href="{{ evaluate_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                            {% endif %}
+                                <i class="bi bi-star"></i><span class="ms-1">評価する</span>
+                            </a>
+                        </div>
                     {% endif %}
                 </div>
 

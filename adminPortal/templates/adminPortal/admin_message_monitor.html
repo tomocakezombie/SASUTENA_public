@@ -6,6 +6,12 @@
 {% block content %}
 <main class="py-4">
     <div class="container">
+                <style>
+                    .admin-scroll-panel {
+                        max-height: 60vh;
+                        overflow-y: auto;
+                    }
+                </style>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <div>
                 <h1 class="h4 mb-1">メッセージモニタ</h1>
@@ -49,7 +55,7 @@
                             </div>
                         </form>
                         {% if threads %}
-                            <div class="list-group list-group-flush">
+                            <div class="list-group list-group-flush admin-scroll-panel">
                                 {% for thread in threads %}
                                     {% with user_a=thread.user_a user_b=thread.user_b item=thread.item latest=thread.latest_message %}
                                         <a
@@ -58,8 +64,19 @@
                                         >
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="fw-semibold">
-                                                    {{ user_a.username }} ↔ {{ user_b.username }}
+                                                    {% if user_a.profile.nick_name %}
+                                                        {{ user_a.profile.nick_name }}（{{ user_a.username }}）
+                                                    {% else %}
+                                                        {{ user_a.username }}
+                                                    {% endif %}
+                                                    ↔
+                                                    {% if user_b.profile.nick_name %}
+                                                        {{ user_b.profile.nick_name }}（{{ user_b.username }}）
+                                                    {% else %}
+                                                        {{ user_b.username }}
+                                                    {% endif %}
                                                 </span>
+
                                                 <span class="badge bg-secondary-subtle text-secondary">{{ thread.message_count }}件</span>
                                             </div>
                                             <div class="small text-muted d-flex flex-column">
@@ -67,7 +84,15 @@
                                                     <span>商品: {{ item.item_name }}</span>
                                                 {% endif %}
                                                 <span>最新: {{ latest.send_time|date:"Y/m/d H:i" }}</span>
-                                                <span>{{ latest.send_user.username }}: {{ latest.message_content|truncatechars:30 }}</span>
+                                                <span>
+                                                    {% if latest.send_user.profile.nick_name %}
+                                                        {{ latest.send_user.profile.nick_name }}（{{ latest.send_user.username }}）
+                                                    {% else %}
+                                                        {{ latest.send_user.username }}
+                                                    {% endif %}
+                                                    : {{ latest.message_content|truncatechars:30 }}
+                                                </span>
+
                                             </div>
                                         </a>
                                     {% endwith %}
@@ -84,7 +109,19 @@
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
                         {% if selected_thread %}
-                            <h2 class="h6 mb-3">{{ selected_thread.user_a.username }} ↔ {{ selected_thread.user_b.username }}</h2>
+                            <h2 class="h6 mb-3">
+                                {% if selected_thread.user_a.profile.nick_name %}
+                                    {{ selected_thread.user_a.profile.nick_name }}（{{ selected_thread.user_a.username }}）
+                                {% else %}
+                                    {{ selected_thread.user_a.username }}
+                                {% endif %}
+                                ↔
+                                {% if selected_thread.user_b.profile.nick_name %}
+                                    {{ selected_thread.user_b.profile.nick_name }}（{{ selected_thread.user_b.username }}）
+                                {% else %}
+                                    {{ selected_thread.user_b.username }}
+                                {% endif %}
+                            </h2>
                             {% if selected_thread.item %}
                                 <p class="small text-muted">対象商品: {{ selected_thread.item.item_name }}</p>
                             {% else %}
@@ -95,7 +132,14 @@
                                 {% for message in thread_messages %}
                                     <div class="mb-3">
                                         <div class="d-flex justify-content-between align-items-center gap-2">
-                                            <span class="fw-semibold">{{ message.send_user.username }}</span>
+                                            <span class="fw-semibold">
+                                                {% if message.send_user.profile.nick_name %}
+                                                    {{ message.send_user.profile.nick_name }}（{{ message.send_user.username }}）
+                                                {% else %}
+                                                    {{ message.send_user.username }}
+                                                {% endif %}
+                                            </span>
+
                                             <span class="text-muted small">{{ message.send_time|date:"Y/m/d H:i" }}</span>
                                         </div>
                                         <p class="small mb-1">{{ message.message_content }}</p>
@@ -111,7 +155,7 @@
                             </div>
                         {% else %}
                             <div class="text-center text-muted py-5">
-                                <p class="mb-0">左の一覧から会話を選択してください。</p>
+                                <p class="mb-0">一覧から会話を選択してください。</p>
                             </div>
                         {% endif %}
                     </div>
