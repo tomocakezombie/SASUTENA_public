@@ -102,7 +102,7 @@
 								<h2 class="h4 mb-2">{{ product.item_name }}</h2>
 								<div class="text-muted small d-flex align-items-center gap-2">
 									{% if product.user != user %}
-										<a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}" title="{{ product.owner_profile.nick_name|default:product.user.username }} のマイページ">
+										<a class="d-inline-flex align-items-center gap-2 text-decoration-none text-muted" href="{% url 'accounts:profile_detail' product.user.username %}?next={{ request.get_full_path|urlencode }}" title="{{ product.owner_profile.nick_name|default:product.user.username }} のマイページ">
 											{% if product.owner_profile and product.owner_profile.icon_image %}
 												<img src="{{ product.owner_profile.icon_image.url }}" alt="{{ product.user.username }} のアイコン" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
 											{% else %}
@@ -202,7 +202,7 @@
 						<li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
 							<div class="d-flex align-items-start gap-3">
 								{% if is_owner %}
-									<a class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;" href="{% url 'accounts:profile_detail' application.user.username %}" title="{{ application.user.username }} のマイページ">
+									<a class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white" style="width: 42px; height: 42px; overflow: hidden;" href="{% url 'accounts:profile_detail' application.user.username %}?next={{ request.get_full_path|urlencode }}" title="{{ application.user.username }} のマイページ">
 										{% if application.user_profile and application.user_profile.icon_image %}
 											<img src="{{ application.user_profile.icon_image.url }}" alt="{{ application.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
 										{% else %}
@@ -258,7 +258,7 @@
 						<li class="py-3{% if not forloop.last %} border-bottom{% endif %}">
 							<div class="d-flex align-items-start gap-3">
 								{% if comment.user != user %}
-									<a class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white comment-avatar" href="{% url 'accounts:profile_detail' comment.user.username %}" title="{{ comment.user.username }} のマイページ">
+									<a class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white comment-avatar" href="{% url 'accounts:profile_detail' comment.user.username %}?next={{ request.get_full_path|urlencode }}" title="{{ comment.user.username }} のマイページ">
 										{% if comment.user_profile and comment.user_profile.icon_image %}
 											<img src="{{ comment.user_profile.icon_image.url }}" alt="{{ comment.user.username }} のアイコン" style="width: 100%; height: 100%; object-fit: cover;">
 										{% else %}

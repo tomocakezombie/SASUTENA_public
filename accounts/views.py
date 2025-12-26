@@ -10,6 +10,8 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.urls import reverse
+from django.conf import settings
 
 from .forms import UserEvaluationForm, userSettings
 from .models import UserEvaluation, UserProfile
@@ -82,6 +84,25 @@ def profile_detail(request, username):
 		count=Count("id"),
 	)
 
+	next_url = request.GET.get("next")
+	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))
+	allowed_hosts.add(request.get_host())
+	allowed_hosts.add("")  # allow relative paths
+	if next_url and url_has_allowed_host_and_scheme(
+		next_url,
+		allowed_hosts=allowed_hosts,
+		require_https=request.is_secure(),
+	):
+		back_url = next_url
+	else:
+		user_role = getattr(request.user, "role", "")
+		if user_role == "producer":
+			back_url = reverse("product:producer_product_list")
+		elif user_role == "consumer":
+			back_url = reverse("product:consumer_product_list")
+		else:
+			back_url = reverse("product:consumer_product_list")
+
 	if profile and not profile.publish_profile:
 		return HttpResponseForbidden("このプロフィールは非公開です")
 
@@ -94,6 +115,7 @@ def profile_detail(request, username):
 			"rating_average": evaluation_stats["avg"],
 			"rating_count": evaluation_stats["count"],
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
+			"back_url": back_url,
 		},
 	)
 
@@ -204,10 +226,13 @@ def evaluate(request, username):
 		return HttpResponseForbidden("自分を評価することはできません。")
 
 	requested_next = request.POST.get("next") or request.GET.get("next")
+	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))
+	allowed_hosts.add(request.get_host())
+	allowed_hosts.add("")
 	if requested_next and not url_has_allowed_host_and_scheme(
-			requested_next,
-			allowed_hosts={request.get_host()},
-			require_https=request.is_secure(),
+		requested_next,
+		allowed_hosts=allowed_hosts,
+		require_https=request.is_secure(),
 	):
 		requested_next = None
 
