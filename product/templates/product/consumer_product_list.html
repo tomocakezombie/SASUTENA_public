@@ -27,7 +27,7 @@
 		</div>
 		<div class="d-flex flex-wrap gap-2">
 			<a class="btn btn-outline-primary" href="{% url 'accounts:my_page' %}">マイページを見る</a>
-			<a class="btn btn-outline-secondary" href="javascript:history.back()">戻る</a>
+			<a class="btn btn-outline-secondary" href="{% url 'accounts:producer_evaluation_overview' %}">生産者を評価する</a>
 			<a class="btn btn-outline-danger" href="{% url 'login:logout' %}">ログアウト</a>
 		</div>
 	</div>
