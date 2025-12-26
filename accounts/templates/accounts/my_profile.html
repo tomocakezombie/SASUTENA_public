@@ -164,6 +164,26 @@
                     </div>
                   </div>
           </section>
+              {% if status_rows %}
+              <section class="mx-auto mt-4" style="max-width:720px;" id="statusSummary" data-status-endpoint="{% url 'accounts:status_summary' %}" data-refresh-interval="10000">
+                <h2 class="h6 text-center mb-3">ステータス</h2>
+                <div class="table-responsive">
+                  <table class="table table-sm mb-0 align-middle">
+                    <tbody id="statusSummaryBody">
+                      {% for row in status_rows %}
+                      <tr class="border-top {% if forloop.first %}border-top-0{% endif %}">
+                        <th scope="row" class="fw-normal text-muted py-3">{{ row.label }}</th>
+                        <td class="py-3 text-end">
+                          <span class="fs-5 fw-semibold text-primary">{{ row.value }}</span>
+                          <span class="ms-1 text-muted">{{ row.unit }}</span>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              {% endif %}
         </div>
       </div>
     </div>
