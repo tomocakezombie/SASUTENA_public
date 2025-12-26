@@ -110,11 +110,13 @@ class VerifySignupView(FormView):
             password=account_request.password, # create_userを使うとハッシュ化されます
             role=account_request.role,
             is_active=False,
+            first_name=account_request.full_name,
         )
 
         # 2. accountsアプリの UserProfile を作成して紐付け
         UserProfile.objects.create(
             user=new_user,
+            name=account_request.full_name,
             nick_name=account_request.username,
             publish_profile=True,
             mail_allow=True

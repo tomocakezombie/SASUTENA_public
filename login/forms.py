@@ -19,13 +19,20 @@ class SignupForm(forms.ModelForm):
 
     class Meta:
         model = AccountRequest
-        fields = ["username", "email", "role", "password"]
+        fields = ["username", "full_name", "email", "role", "password"]
+        labels = {
+            "full_name": "氏名",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         role_field = self.fields.get("role")
         if role_field:
             role_field.choices = [choice for choice in role_field.choices if choice[0] in {"producer", "consumer"}]
+
+        full_name_field = self.fields.get("full_name")
+        if full_name_field:
+            full_name_field.required = True
 
         for name, field in self.fields.items():
             widget = field.widget

@@ -19,6 +19,7 @@ class CustomUser(AbstractUser):
 # 新規アカウント作成時のリクエスト
 class AccountRequest(models.Model):
     username = models.CharField(max_length=150)
+    full_name = models.CharField(max_length=255, blank=True, verbose_name="氏名")
     email = models.EmailField()
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="consumer")
     password = models.CharField(max_length=128)
