@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -16,8 +16,8 @@ from django.conf import settings
 from .forms import UserEvaluationForm, userSettings
 from .models import UserEvaluation, UserProfile
 
-from product.models import ProductApplication , Product
-from django.db.models import Count
+from login.models import AccountRequest
+from product.models import ProductApplication, Product
 
 
 User = get_user_model()
@@ -37,6 +37,47 @@ def _build_star_states(average_score):
 		else:
 			states.append("empty")
 	return states
+
+
+def build_status_rows(user):
+	"""Return per-role status summaries for the profile dashboard."""
+	role = getattr(user, "role", "")
+	rows = []
+	if role == "producer":
+		products = Product.objects.filter(user=user)
+		pending_products = products.filter(
+			valid=False,
+			rejected_at__isnull=True,
+		).filter(Q(admin_comment__isnull=True) | Q(admin_comment=""))
+		rows.append({"label": "承認待ち出品", "value": pending_products.count(), "unit": "件"})
+		rows.append({"label": "承認済み出品", "value": products.filter(valid=True).count(), "unit": "件"})
+		orders_count = ProductApplication.objects.filter(product__user=user).count()
+		rows.append({"label": "受注（申込み）件数", "value": orders_count, "unit": "件"})
+	elif role == "consumer":
+		applications = ProductApplication.objects.filter(user=user)
+		rows.append({"label": "申込み済み出品", "value": applications.count(), "unit": "件"})
+		rows.append({
+			"label": "承認済み申込み",
+			"value": applications.filter(apply_status=ProductApplication.STATUS_APPROVED).count(),
+			"unit": "件",
+		})
+		rows.append({
+			"label": "承認待ち申込み",
+			"value": applications.filter(apply_status=ProductApplication.STATUS_PENDING).count(),
+			"unit": "件",
+		})
+	elif role == "admin":
+		pending_requests = AccountRequest.objects.filter(is_approved=False).count()
+		rejected_products = Product.objects.filter(rejected_at__isnull=False).count()
+		unapproved_products = Product.objects.filter(valid=False, rejected_at__isnull=True).count()
+		registered_users = User.objects.filter(is_active=True).count()
+		rows = [
+			{"label": "ユーザーの承認待ち申請", "value": pending_requests, "unit": "件"},
+			{"label": "ユーザー及び出品物の却下済み", "value": rejected_products, "unit": "件"},
+			{"label": "未承認の出品", "value": unapproved_products, "unit": "件"},
+			{"label": "登録済みユーザー", "value": registered_users, "unit": "名"},
+		]
+	return rows
 
 
 @login_required
@@ -67,6 +108,7 @@ def my_page(request):
 			"rating_average": evaluation_stats["avg"],
 			"rating_count": evaluation_stats["count"],
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
+			"status_rows": build_status_rows(request.user),
 		},
 	)
 
@@ -391,6 +433,15 @@ def history(request):
 		"received_list": received_list,
 		"product_list": product_list,
 	})
+
+
+@login_required
+def status_summary(request):
+	"""Return JSON payload containing status rows for the current user."""
+	if request.method != "GET":
+		return JsonResponse({"detail": "METHOD_NOT_ALLOWED"}, status=405)
+	rows = build_status_rows(request.user)
+	return JsonResponse({"rows": rows})
 
 
 

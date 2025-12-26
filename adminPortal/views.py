@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from login.models import AccountRequest
 from product.models import Product, TagType, ProductApplication
 from accounts.models import UserEvaluation, UserProfile
+from accounts.views import build_status_rows
 from comunicate.models import Message
 from .forms import TagTypeForm
 
@@ -324,6 +325,7 @@ def admin_my_page(request):
             "rating_average": evaluation_stats["avg"],
             "rating_count": evaluation_stats["count"],
             "rating_stars": _build_star_states(evaluation_stats["avg"]),
+            "status_rows": build_status_rows(request.user),
         },
     )
 

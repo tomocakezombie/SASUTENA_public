@@ -1,10 +1,112 @@
 (function () {
+  const STATUS_REFRESH_EVENT = 'sasutena:refreshStatus';
+
   const getCsrfToken = () => {
     const match = document.cookie.match(/csrftoken=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
   };
 
+  const setupStatusSummary = () => {
+    const section = document.getElementById('statusSummary');
+    if (!section || section.dataset.statusInitialized === '1') {
+      return;
+    }
+
+    const endpoint = section.dataset.statusEndpoint || '';
+    const tbody = document.getElementById('statusSummaryBody');
+
+    if (!endpoint || !tbody) {
+      return;
+    }
+
+    const placeholderRow = () => {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 2;
+      cell.className = 'py-3 text-muted';
+      cell.textContent = '情報を取得できませんでした。';
+      row.appendChild(cell);
+      return row;
+    };
+
+    const renderRows = (rows) => {
+      tbody.innerHTML = '';
+      if (!Array.isArray(rows) || rows.length === 0) {
+        tbody.appendChild(placeholderRow());
+        return;
+      }
+
+      rows.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        tr.className = index === 0 ? 'border-top-0' : 'border-top';
+
+        const th = document.createElement('th');
+        th.scope = 'row';
+        th.className = 'fw-normal text-muted py-3';
+        th.textContent = row.label || '';
+
+        const td = document.createElement('td');
+        td.className = 'py-3 text-end';
+
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'fs-5 fw-semibold text-primary';
+        valueSpan.textContent = typeof row.value === 'number' ? row.value : (row.value || '0');
+
+        const unitSpan = document.createElement('span');
+        unitSpan.className = 'ms-1 text-muted';
+        unitSpan.textContent = row.unit || '';
+
+        td.appendChild(valueSpan);
+        if (row.unit) {
+          td.appendChild(unitSpan);
+        }
+
+        tr.appendChild(th);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      });
+    };
+
+    const refresh = () => {
+      fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('failed');
+          }
+          return response.json();
+        })
+        .then((data) => {
+          renderRows(data && data.rows);
+        })
+        .catch(() => {
+          renderRows(null);
+        });
+    };
+
+    const intervalMs = parseInt(section.dataset.refreshInterval || '0', 10);
+    if (!Number.isNaN(intervalMs) && intervalMs > 0) {
+      setInterval(refresh, intervalMs);
+    }
+
+    document.addEventListener(STATUS_REFRESH_EVENT, refresh);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        refresh();
+      }
+    });
+
+    section.dataset.statusInitialized = '1';
+    refresh();
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
+    setupStatusSummary();
+
     const editBtn = document.getElementById('profileEditBtn');
     const editor = document.getElementById('profileBioEditor');
     const display = document.getElementById('profileBioDisplay');
@@ -132,5 +234,17 @@
     });
 
     renderBio(currentBio);
+  });
+
+  window.SasutenaStatus = {
+    refresh() {
+      document.dispatchEvent(new CustomEvent(STATUS_REFRESH_EVENT));
+    },
+  };
+
+  window.addEventListener('pageshow', () => {
+    if (!document.hidden) {
+      window.SasutenaStatus.refresh();
+    }
   });
 })();
