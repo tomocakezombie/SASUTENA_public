@@ -186,6 +186,24 @@
   let selectedUserButton = null;
   let activeThreadButton = null;
 
+  function executeScripts(fragment) {
+    if (!fragment) {
+      return;
+    }
+    const scripts = fragment.querySelectorAll('script');
+    scripts.forEach(original => {
+      const script = document.createElement('script');
+      if (original.src) {
+        script.src = original.src;
+        script.async = false;
+      } else {
+        script.textContent = original.textContent;
+      }
+      document.body.appendChild(script);
+      document.body.removeChild(script);
+    });
+  }
+
   function updateSearchState(input) {
     if (!input) {
       return;
@@ -656,6 +674,8 @@
     } else {
       formWrapper.hidden = true;
     }
+
+    executeScripts(temp);
 
     const counterpart = thread.dataset.counterpart || '';
     const itemName = thread.dataset.itemName && thread.dataset.itemName.trim()

@@ -38,6 +38,11 @@ class MessageEditForm(forms.ModelForm):
         content = self.cleaned_data["message_content"].strip()
         if not content:
             raise forms.ValidationError("メッセージを入力してください。")
+        original = ""
+        if self.instance and self.instance.pk:
+            original = (self.instance.message_content or "").strip()
+        if content == original:
+            raise forms.ValidationError("メッセージが変更されていません。")
         return content
 
 
