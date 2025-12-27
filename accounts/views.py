@@ -40,7 +40,7 @@ def _build_star_states(average_score):
 @login_required
 def my_page(request):
 	"""Display the logged-in user's own profile page."""
-	profile, _created = UserProfile.objects.get_or_create(  # safeguard in case profile is missing
+	profile, _ = UserProfile.objects.get_or_create(  # safeguard in case profile is missing
 		user=request.user,
 		defaults={
 			"nick_name": request.user.username,
@@ -48,6 +48,7 @@ def my_page(request):
 			"mail_allow": True,
 		},
 	)
+
 	evaluation_stats = UserEvaluation.objects.filter(target_user_id=request.user).aggregate(
 		avg=Avg("score"),
 		count=Count("id"),
@@ -152,6 +153,9 @@ def settings(request):
 			update_session_auth_hash(request, user)
 			messages.success(request, "パスワードを更新しました。")
 			return redirect("accounts:settings")
+		elif form_type == "password":
+			# フォームエラーをターミナルに出力
+			print("PasswordChangeForm errors:", password_form.errors)
 		if form_type not in {"profile", "password"}:
 			messages.error(request, "送信内容を処理できませんでした。改めてお試しください。")
 
