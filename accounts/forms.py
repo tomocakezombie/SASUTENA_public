@@ -6,7 +6,7 @@ from .models import UserEvaluation, UserProfile
 class userSettings(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ["nick_name", "publish_profile", "mail_allow", "icon_image","content_profile"]
+        fields = ["nick_name", "publish_profile", "mail_allow", "icon_image", "content_profile", "memo"]
         widgets = {
             "icon_image": forms.FileInput(
                 attrs={
@@ -17,6 +17,7 @@ class userSettings(forms.ModelForm):
                 }
             ),
             "bio": forms.Textarea(attrs={"class": "form-control", "rows": 3, "maxlength": 100}),  # 最大文字数指定
+            "memo": forms.Textarea(attrs={"class": "form-control", "rows": 3, "maxlength": 511}),
         }
 
 

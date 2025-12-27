@@ -135,6 +135,10 @@ def settings(request):
 				updated_profile.icon_image = None
 			if not updated_profile.nick_name:
 				updated_profile.nick_name = request.user.username
+
+			# 管理用メモの保存
+			updated_profile.memo = profile_form.cleaned_data.get("memo", "")
+
 			updated_profile.save()
 			profile_form.save_m2m()
 

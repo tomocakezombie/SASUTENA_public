@@ -81,7 +81,10 @@
                 </div>
                 <div>
                     <label class="form-label small" for="settingsMemo">管理用メモ（自分にのみ表示）</label>
-                    <textarea id="settingsMemo" class="form-control" rows="3" placeholder="気になる申請状況や対応メモを記録できます"></textarea>
+                    {{ profile_form.memo }}
+                    {% if profile_form.memo.errors %}
+                    <div class="invalid-feedback d-block">{{ profile_form.memo.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">保存する</button>
