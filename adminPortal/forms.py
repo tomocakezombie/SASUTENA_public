@@ -35,7 +35,16 @@ class TagTypeForm(forms.ModelForm):
             raise forms.ValidationError("同じ名前のタグが既に存在します。")
         return name
 
+
 class ExpirationNoticeSettingForm(forms.ModelForm):
+    def clean_notify_days_before(self):
+        value = self.cleaned_data.get("notify_days_before")
+        if value is None:
+            return value
+        if value <= 0:
+            raise forms.ValidationError("1以上の数値を入力してください。")
+        return value
+
     class Meta:
         model = ExpirationNoticeSetting
         fields = ['message', 'bg_color', 'text_color', 'is_active', 'notify_days_before']
