@@ -22,6 +22,7 @@
         <div class="input-group mb-2">
           <span class="input-group-text">検索</span>
           <input type="search" class="form-control" id="userSearchInput" placeholder="ユーザー名で検索" autocomplete="off">
+          <button type="button" class="btn btn-outline-primary" id="userSearchButton">検索</button>
           <button type="button" class="btn btn-outline-secondary" id="userSearchClear">クリア</button>
         </div>
 
@@ -181,6 +182,7 @@
   const subtitleEl = document.getElementById('conversationSubtitle');
   const profileButton = document.getElementById('profileButton');
   const userSearchInput = document.getElementById('userSearchInput');
+  const userSearchButton = document.getElementById('userSearchButton');
   const userSearchClear = document.getElementById('userSearchClear');
   let currentUrl = '';
   let selectedUserButton = null;
@@ -756,6 +758,9 @@
   }
 
   function filterUsers() {
+    if (!userSearchInput || !userList) {
+      return;
+    }
     const term = userSearchInput.value.trim().toLowerCase();
     const users = userList.querySelectorAll('.conversation-user');
     users.forEach(user => {
@@ -771,10 +776,21 @@
   }
 
   if (userSearchInput) {
-    userSearchInput.addEventListener('input', filterUsers);
+    userSearchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        filterUsers();
+      }
+    });
+  }
+  if (userSearchButton) {
+    userSearchButton.addEventListener('click', filterUsers);
   }
   if (userSearchClear) {
     userSearchClear.addEventListener('click', () => {
+      if (!userSearchInput) {
+        return;
+      }
       userSearchInput.value = '';
       filterUsers();
       userSearchInput.focus();
