@@ -34,7 +34,13 @@
 						{% if producer_list %}
 							{% for producer in producer_list %}
 							<tr>
-								<td class="fw-semibold">{{ producer.username }}</td>
+								<td class="fw-semibold">
+									{% if producer.profile.nick_name %}
+										{{ producer.profile.nick_name }}
+									{% else %}
+										{{ producer.username }}
+									{% endif %}
+								</td>
 								<td class="text-muted">
 									{% if producer.average_score %}
 										{{ producer.average_score|floatformat:1 }} / 5.0
@@ -75,7 +81,13 @@
 						{% if evaluation_history %}
 							{% for entry in evaluation_history %}
 							<tr>
-								<td class="fw-semibold">{{ entry.target_user_id.username }}</td>
+								<td class="fw-semibold">
+									{% if entry.target_user_id.profile.nick_name %}
+										{{ entry.target_user_id.profile.nick_name }}
+									{% else %}
+										{{ entry.target_user_id.username }}
+									{% endif %}
+								</td>
 								<td>{{ entry.score|floatformat:1 }} / 5.0</td>
 								<td class="text-muted small">{{ entry.comment|default:"(コメントなし)" }}</td>
 							</tr>
