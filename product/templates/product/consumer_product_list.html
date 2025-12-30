@@ -24,6 +24,13 @@
 		<div>
 			<h2 class="fw-semibold mb-2">商品検索・申込み</h2>
 			<p class="text-muted mb-0">気になる出品を探して申込みを行うメニューです。</p>
+			{% if new_product_count > 0 %}
+			<div id="new-product-notice"
+				class="alert alert-info"
+				style="cursor:pointer;">
+				【NEW!】 新着商品が {{ new_product_count }} 件あります
+			</div>
+			{% endif %}
 		</div>
 		<div class="d-flex flex-wrap gap-2">
 			<a class="btn btn-outline-primary" href="{% url 'accounts:my_page' %}">マイページを見る</a>
@@ -156,7 +163,7 @@
 										<span class="visually-hidden">{{ product.owner_profile.nick_name|default:product.user.username }}のマイページへ</span>
 									</a>
 								</div>
-								<a class="btn btn-link p-0" href="{% url 'product:product_detail' product.pk %}">詳細／申込み</a>
+								<a class="btn btn-sm btn-outline-primary" href="{% url 'product:product_detail' product.pk %}">詳細／申込み</a>
 							</div>
 						</div>
 					</div>
@@ -223,6 +230,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     scroll();
+
+	const notice = document.getElementById("new-product-notice");
+    if (!notice) return;
+
+    // すでに消したことがあるなら表示しない
+    if (sessionStorage.getItem("newProductsSeen") === "true") {
+        notice.style.display = "none";
+        return;
+    }
+
+    notice.addEventListener("click", function () {
+        sessionStorage.setItem("newProductsSeen", "true");
+        notice.style.display = "none";
+    });
 });
 </script>
 {% endblock %}
