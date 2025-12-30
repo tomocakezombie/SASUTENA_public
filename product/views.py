@@ -253,7 +253,7 @@ def consumer_product_list(request):
     products_qs = Product.objects.all().order_by('-created_at')  # 必要に応じてフィルターを適用
 
     # ページネーション設定
-    paginator = Paginator(products_qs, 10)  # 1ページあたり10件
+    paginator = Paginator(filtered_products.distinct().order_by('-created_at'), 10)  # 1ページあたり10件
     page_number = request.GET.get('page')  # URLパラメータ ?page=2 など
     page_obj = paginator.get_page(page_number)
 
