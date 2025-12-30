@@ -219,8 +219,8 @@ def consumer_product_list(request):
     if end_before:
         filtered_products = filtered_products.filter(end_time__date__lte=end_before)
 
-    products = list(filtered_products.distinct().order_by('-created_at'))
-    _attach_owner_profiles(products)
+    filtered_products = filtered_products.distinct().order_by('-created_at')
+    _attach_owner_profiles(filtered_products)
     filter_active = bool(
         search_tokens
         or quantity_min
@@ -250,19 +250,20 @@ def consumer_product_list(request):
                 .replace("{{item}}", product.item_name)
             )
             
-    products_qs = Product.objects.all().order_by('-created_at')  # 必要に応じてフィルターを適用
-
-    # ページネーション設定
-    paginator = Paginator(filtered_products.distinct().order_by('-created_at'), 10)  # 1ページあたり10件
-    page_number = request.GET.get('page')  # URLパラメータ ?page=2 など
+    
+    paginator = Paginator(filtered_products, 10)
+    page_number = request.GET.get('page')  
     page_obj = paginator.get_page(page_number)
+
+    _attach_owner_profiles(page_obj.object_list)
+    print("filtered_products count:", filtered_products.count())
+    print("page_number:", page_number)
 
                 
     return render(
         request,
         'product/consumer_product_list.html',
         {
-            'products': products,
             'search_query': search_query,
             'search_tokens': search_tokens,
             'quantity_min': quantity_min or "",
@@ -272,7 +273,6 @@ def consumer_product_list(request):
             'filter_active': filter_active,
             'expiring_products': expiring_products,
             'expiration_notice': notice,
-            'products': page_obj,
             'page_obj': page_obj, 
         },
     )
