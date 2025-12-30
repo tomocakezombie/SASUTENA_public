@@ -17,6 +17,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from adminPortal.models import ExpirationNoticeSetting
+from django.core.paginator import Paginator
 
 def _get_profiles_map(user_ids):
     """Return a mapping of user_id to profile for given users."""
@@ -248,6 +249,13 @@ def consumer_product_list(request):
                 .replace("{{user}}", user_display)
                 .replace("{{item}}", product.item_name)
             )
+            
+    products_qs = Product.objects.all().order_by('-created_at')  # 必要に応じてフィルターを適用
+
+    # ページネーション設定
+    paginator = Paginator(products_qs, 10)  # 1ページあたり10件
+    page_number = request.GET.get('page')  # URLパラメータ ?page=2 など
+    page_obj = paginator.get_page(page_number)
 
                 
     return render(
@@ -264,6 +272,8 @@ def consumer_product_list(request):
             'filter_active': filter_active,
             'expiring_products': expiring_products,
             'expiration_notice': notice,
+            'products': page_obj,
+            'page_obj': page_obj, 
         },
     )
 
