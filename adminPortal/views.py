@@ -85,8 +85,27 @@ def admin_portal_list(request):
     base_requests = AccountRequest.objects.order_by("-request_date")
     unverified_requests = base_requests.filter(is_verified=False)
     verified_requests = base_requests.filter(is_verified=True)
+    
+    new_account_request_count = verified_requests.filter(
+        is_approved=False
+    ).count()
+    
+    pending_products_qs = Product.objects.filter(
+        valid=False,
+        publish=False,
+        rejected_at__isnull=True,
+    )
+    new_product_count = pending_products_qs.count()
+    
     products = list(Product.objects.select_related("user").order_by("-created_at"))
     _attach_product_profiles(products)
+    
+    for product in products:
+        product.is_pending_review = (
+            not product.valid
+            and not product.publish
+            and product.rejected_at is None
+        )
 
     return render(
         request,
@@ -95,6 +114,8 @@ def admin_portal_list(request):
             "unverified_requests": unverified_requests,
             "verified_requests": verified_requests,
             "products": products,
+            "new_account_request_count": new_account_request_count,
+            "new_product_count": new_product_count,
         },
     )
 
@@ -375,6 +396,7 @@ def toggle_product_visibility(request, pk):
     if product.publish:
         product.valid = True
         product.rejected_at = None
+        product.published_at = timezone.now()
         updates.extend(["valid", "rejected_at"])
         message = f"{product.item_name} を公開しました。"
     else:

@@ -26,6 +26,7 @@ class Product(models.Model):
         blank=True,
     )
     show_expiration_notice = models.BooleanField(default=False,verbose_name="締め切り間近通知に表示する")
+    published_at = models.DateTimeField(null=True, blank=True)
     
     def __str__(self):
         return f"{self.item_name} (ID: {self.item_id})"
