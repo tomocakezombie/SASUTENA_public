@@ -18,6 +18,7 @@ from .models import UserEvaluation, UserProfile
 
 from login.models import AccountRequest
 from product.models import ProductApplication, Product
+from collections import defaultdict
 
 
 User = get_user_model()
@@ -96,6 +97,30 @@ def my_page(request):
 		avg=Avg("score"),
 		count=Count("id"),
 	)
+	evaluations = UserEvaluation.objects.filter(
+		target_user_id=request.user
+	).select_related("from_user_id__profile").order_by("created_at")  
+
+ 
+	user_comments = defaultdict(list)
+	latest_times = {}
+	last_scores = {}
+
+	for e in evaluations:
+		user_comments[e.from_user_id].append(e)
+		latest_times[e.from_user_id] = e.created_at
+		last_scores[e.from_user_id] = e.score
+
+    # ユーザーごとのリストに変換
+	received_evaluations_by_user = []
+	for user, entries in user_comments.items():
+		received_evaluations_by_user.append({
+            "user": user,
+            "entries": entries,
+            "latest": latest_times[user],
+            "last_score": last_scores[user],
+        })
+
 
 	if getattr(request.user, "role", "") == "admin":
 		return redirect("adminPortal:my_page")
@@ -109,6 +134,7 @@ def my_page(request):
 			"rating_average": evaluation_stats["avg"],
 			"rating_count": evaluation_stats["count"],
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
+   			"received_evaluations_by_user": received_evaluations_by_user,
 			"status_rows": build_status_rows(request.user),
 		},
 	)
