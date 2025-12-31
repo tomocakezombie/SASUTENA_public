@@ -16,6 +16,7 @@ from .mentions import sync_comment_mentions
 from datetime import timedelta
 
 from adminPortal.models import ExpirationNoticeSetting
+from django.core.paginator import Paginator
 
 def _get_profiles_map(user_ids):
     """Return a mapping of user_id to profile for given users."""
@@ -217,15 +218,17 @@ def consumer_product_list(request):
     if end_before:
         filtered_products = filtered_products.filter(end_time__date__lte=end_before)
 
-    products = list(filtered_products.distinct().order_by('-created_at'))
+    filtered_products = filtered_products.distinct().order_by('-created_at')
+    products = list(filtered_products)
     _attach_owner_profiles(products)
-    
+
     now = timezone.now()
     NEW_LIMIT = timedelta(hours=6)
 
     for product in products:
         product.is_new = (now - product.created_at) <= NEW_LIMIT
-    
+
+    new_product_count = sum(1 for p in products if getattr(p, "is_new", False))
     filter_active = bool(
         search_tokens
         or quantity_min
@@ -255,7 +258,11 @@ def consumer_product_list(request):
                 .replace("{{item}}", product.item_name)
             )
             
-    new_product_count = sum(1 for p in products if p.is_new)
+    paginator = Paginator(filtered_products, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    _attach_owner_profiles(page_obj.object_list)
 
                 
     return render(
@@ -273,6 +280,7 @@ def consumer_product_list(request):
             'filter_active': filter_active,
             'expiring_products': expiring_products,
             'expiration_notice': notice,
+            'page_obj': page_obj, 
         },
     )
 
