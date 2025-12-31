@@ -18,4 +18,8 @@ jobs:
           pip install Pillow
       - name: Run unit-tests
         run: |
-          python manage.py test
+          python manage.py test accounts
+          python manage.py test adminPortal
+          python manage.py test comunicate
+          python manage.py test login
+          python manage.py test product
