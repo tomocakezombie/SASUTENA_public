@@ -238,11 +238,14 @@ def consumer_portal(request):
     role = getattr(request.user, "role", "")
 
     if role == "consumer":
+        profile = getattr(request.user, "profile", None)
+        if profile is None:
+            profile = getattr(request.user, "userprofile", None)
         return render(
             request,
             "login/consumer_portal.html",
             {
-                "user_profile": getattr(request.user, "userprofile", None),
+                "user_profile": profile,
             },
         )
 
