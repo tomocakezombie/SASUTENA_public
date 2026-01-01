@@ -6,7 +6,6 @@ from datetime import timedelta
 
 from .models import UserProfile, UserEvaluation
 from .forms import UserEvaluationForm
-from .models import UserProfile
 
 
 class AccountsAppTests(TestCase):
@@ -218,3 +217,124 @@ class AccountsAppTests(TestCase):
 		response = self.client.post(url, data={"content_profile": "x" * 101}, content_type="application/json")
 		self.assertEqual(response.status_code, 400)
 		self.assertIn("BIO_TOO_LONG", response.json()["error"])
+
+
+class AccountsUrlAndViewTests(TestCase):
+	"""accounts アプリの URL 逆引きおよび基本アクセス制御テスト。"""
+
+	def setUp(self):
+		User = get_user_model()
+		self.consumer = User.objects.create_user("cons", password="pw", role="consumer", email="c@example.com")
+		self.producer = User.objects.create_user("prod", password="pw", role="producer", email="p@example.com")
+		self.admin = User.objects.create_user("admin", password="pw", role="admin", email="a@example.com")
+		UserProfile.objects.get_or_create(user=self.consumer)
+		UserProfile.objects.get_or_create(user=self.producer)
+		UserProfile.objects.get_or_create(user=self.admin)
+
+	def test_reverse_producer_evaluation_overview(self):
+		self.assertEqual(reverse("accounts:producer_evaluation_overview"), "/accounts/evaluate/")
+
+	def test_reverse_my_page(self):
+		self.assertEqual(reverse("accounts:my_page"), "/accounts/my_page/")
+
+	def test_reverse_update_profile_bio(self):
+		self.assertEqual(reverse("accounts:update_profile_bio"), "/accounts/my_page/bio/")
+
+	def test_reverse_status_summary(self):
+		self.assertEqual(reverse("accounts:status_summary"), "/accounts/my_page/status/")
+
+	def test_reverse_profile_detail(self):
+		self.assertEqual(reverse("accounts:profile_detail", args=["demo"]), "/accounts/users/demo/")
+
+	def test_reverse_evaluate(self):
+		self.assertEqual(reverse("accounts:evaluate", args=["demo"]), "/accounts/users/demo/evaluate/")
+
+	def test_reverse_settings(self):
+		self.assertEqual(reverse("accounts:settings"), "/accounts/settings/")
+
+	def test_reverse_history(self):
+		self.assertEqual(reverse("accounts:history"), "/accounts/history/")
+
+	def test_my_page_access_consumer(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:my_page"))
+		self.assertEqual(resp.status_code, 200)
+
+	def test_my_page_redirect_admin(self):
+		self.client.login(username="admin", password="pw")
+		resp = self.client.get(reverse("accounts:my_page"))
+		self.assertEqual(resp.status_code, 302)
+		self.assertIn(reverse("adminPortal:my_page"), resp.url)
+
+	def test_producer_evaluation_overview_consumer_ok(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:producer_evaluation_overview"))
+		self.assertEqual(resp.status_code, 200)
+
+	def test_producer_evaluation_overview_forbidden_for_producer(self):
+		self.client.login(username="prod", password="pw")
+		resp = self.client.get(reverse("accounts:producer_evaluation_overview"))
+		self.assertEqual(resp.status_code, 403)
+
+	def test_profile_detail_self_redirect(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:profile_detail", args=["cons"]))
+		self.assertEqual(resp.status_code, 302)
+		self.assertEqual(resp.url, reverse("accounts:my_page"))
+
+	def test_profile_detail_private_profile_forbidden(self):
+		profile = UserProfile.objects.get(user=self.producer)
+		profile.publish_profile = False
+		profile.save(update_fields=["publish_profile"])
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:profile_detail", args=["prod"]))
+		self.assertEqual(resp.status_code, 403)
+
+	def test_profile_detail_public_profile(self):
+		profile = UserProfile.objects.get(user=self.producer)
+		profile.publish_profile = True
+		profile.save(update_fields=["publish_profile"])
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:profile_detail", args=["prod"]))
+		self.assertEqual(resp.status_code, 200)
+
+	def test_update_profile_bio_json_success(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.post(
+			reverse("accounts:update_profile_bio"),
+			data=json.dumps({"content_profile": "short bio"}),
+			content_type="application/json",
+		)
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(resp.json()["bio"], "short bio")
+
+	def test_update_profile_bio_too_long_json(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.post(
+			reverse("accounts:update_profile_bio"),
+			data=json.dumps({"content_profile": "x" * 101}),
+			content_type="application/json",
+		)
+		self.assertEqual(resp.status_code, 400)
+		self.assertIn("BIO_TOO_LONG", resp.json()["error"])
+
+	def test_settings_get(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:settings"))
+		self.assertEqual(resp.status_code, 200)
+
+	def test_settings_post_profile_updates(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.post(reverse("accounts:settings"), data={"form_type": "profile", "nick_name": "NewNick"})
+		self.assertEqual(resp.status_code, 302)
+		self.assertEqual(UserProfile.objects.get(user=self.consumer).nick_name, "NewNick")
+
+	def test_settings_post_password_invalid_shows_page(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.post(reverse("accounts:settings"), data={"form_type": "password", "old_password": "wrong"})
+		self.assertEqual(resp.status_code, 200)
+
+	def test_history_get_consumer(self):
+		self.client.login(username="cons", password="pw")
+		resp = self.client.get(reverse("accounts:history"))
+		self.assertEqual(resp.status_code, 200)
