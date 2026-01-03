@@ -396,6 +396,7 @@ def toggle_product_visibility(request, pk):
     if product.publish:
         product.valid = True
         product.rejected_at = None
+        product.published_at = timezone.now()
         updates.extend(["valid", "rejected_at"])
         message = f"{product.item_name} を公開しました。"
     else:
