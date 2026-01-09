@@ -19,7 +19,7 @@ from accounts.views import build_status_rows
 from comunicate.models import Message
 from .forms import TagTypeForm
 
-from .models import ExpirationNoticeSetting
+from .models import ExpirationNoticeSetting, ProductApprovalSetting
 from .forms import ExpirationNoticeSettingForm
 
 
@@ -119,6 +119,7 @@ def admin_portal_list(request):
         rejected_at__isnull=True,
     )
     new_product_count = pending_products_qs.count()
+    approval_setting = ProductApprovalSetting.get_solo()
     
     products = list(Product.objects.select_related("user").order_by("-created_at"))
     _attach_product_profiles(products)
@@ -139,6 +140,7 @@ def admin_portal_list(request):
             "products": products,
             "new_account_request_count": new_account_request_count,
             "new_product_count": new_product_count,
+            "auto_publish_enabled": approval_setting.auto_publish_new_products,
         },
     )
 
@@ -204,15 +206,51 @@ def manage_tags(request):
     if not _ensure_admin(request.user):
         return redirect("login:index")
 
+    sort_field = request.GET.get("sort", "name")
+    sort_dir = request.GET.get("dir", "asc")
+
+    field_map = {
+        "id": "tag_id",
+        "name": "tag_name",
+        "created": "created_t",
+    }
+    if sort_field not in field_map:
+        sort_field = "name"
+    if sort_dir not in {"asc", "desc"}:
+        sort_dir = "asc"
+
+    order_expression = field_map[sort_field]
+    if sort_dir == "desc":
+        order_expression = f"-{order_expression}"
+
     form = TagTypeForm(request.POST or None)
-    tag_list = TagType.objects.order_by("tag_name")
+    tag_list = TagType.objects.order_by(order_expression)
 
     if request.method == "POST":
         if form.is_valid():
             form.save()
             messages.success(request, "タグを追加しました。")
-            return redirect("adminPortal:manage_tags")
+            redirect_url = reverse("adminPortal:manage_tags")
+            if request.GET:
+                redirect_url = f"{redirect_url}?{request.GET.urlencode()}"
+            return redirect(redirect_url)
         messages.error(request, "タグを追加できませんでした。内容を確認してください。")
+
+    base_url = reverse("adminPortal:manage_tags")
+
+    def _sort_link(field_key):
+        direction = "desc" if sort_field == field_key and sort_dir == "asc" else "asc"
+        query = request.GET.copy()
+        query["sort"] = field_key
+        query["dir"] = direction
+        encoded = query.urlencode()
+        return f"{base_url}?{encoded}" if encoded else base_url
+
+    sort_links = {
+        "id": _sort_link("id"),
+        "name": _sort_link("name"),
+        "created": _sort_link("created"),
+    }
 
     return render(
         request,
@@ -220,6 +258,9 @@ def manage_tags(request):
         {
             "form": form,
             "tag_list": tag_list,
+            "sort_field": sort_field,
+            "sort_dir": sort_dir,
+            "sort_links": sort_links,
         },
     )
 
@@ -519,6 +560,24 @@ def reject_account_request(request, pk):
     messages.success(request, f"{account_request.username} の申請を却下しました。")
     if not email_sent:
         messages.warning(request, "却下通知メールの送信に失敗しました。メール設定をご確認ください。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def toggle_auto_publish_setting(request):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    setting = ProductApprovalSetting.get_solo()
+    setting.auto_publish_new_products = not setting.auto_publish_new_products
+    setting.save(update_fields=["auto_publish_new_products", "updated_at"])
+
+    if setting.auto_publish_new_products:
+        messages.success(request, "新規出品は自動的に公開されるようになりました。")
+    else:
+        messages.success(request, "新規出品は承認後に公開する設定に戻しました。")
+
     return redirect("adminPortal:admin_portal_list")
 
 

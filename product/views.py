@@ -15,7 +15,7 @@ from .mentions import sync_comment_mentions
 
 from datetime import timedelta
 
-from adminPortal.models import ExpirationNoticeSetting
+from adminPortal.models import ExpirationNoticeSetting, ProductApprovalSetting
 from django.core.paginator import Paginator
 
 def _get_profiles_map(user_ids):
@@ -90,20 +90,39 @@ def product_create(request):
 
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
-        print("フォーム送信を受け取りました")
         if form.is_valid():
-            print("フォームは有効です")
             product = form.save(commit=False)
             product.user = request.user
+            if ProductApprovalSetting.is_auto_publish_enabled():
+                product.publish = True
+                product.valid = True
+                if not product.published_at:
+                    product.published_at = timezone.now()
             product.save()
             form.save_m2m()
+            form.save_tags(product)
             return redirect('product:producer_product_list')
-        print("フォームは無効です")
-        return render(request, 'product/product_create.html', {'form': form})
+        return render(
+            request,
+            'product/product_create.html',
+            {
+                'form': form,
+                'tag_suggestions': form.tag_suggestions,
+                'selected_tags': form.get_selected_tag_tokens(),
+            },
+        )
     else:
         form = ProductForm()
 
-    return render(request, 'product/product_create.html', {'form': form})
+    return render(
+        request,
+        'product/product_create.html',
+        {
+            'form': form,
+            'tag_suggestions': form.tag_suggestions,
+            'selected_tags': form.get_selected_tag_tokens(),
+        },
+    )
 
 @login_required
 def product_list(request):
@@ -340,7 +359,10 @@ def product_detail(request, pk):
     if redirect_response:
         return redirect_response
 
-    product = get_object_or_404(Product, pk=pk)
+    product = get_object_or_404(
+        Product.objects.prefetch_related("tags"),
+        pk=pk,
+    )
     _attach_owner_profiles([product])
     is_owner = product.user == request.user
     user_role = getattr(request.user, 'role', '')
@@ -409,6 +431,7 @@ def product_detail(request, pk):
 
     return render(request, 'product/product_detail.html', {
         'product': product,
+        'product_tags': list(product.tags.order_by("tag_name")),
         'is_owner': is_owner,
         'applications': applications,
         'show_apply_button': can_apply and user_application is None,
