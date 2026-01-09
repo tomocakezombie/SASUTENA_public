@@ -9,6 +9,19 @@
                 max-height: 60vh;
                 overflow-y: auto;
             }
+            .table-sort-link {
+                color: inherit;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+            }
+            .table-sort-link:hover {
+                text-decoration: underline;
+            }
+            .table-sort-icon {
+                font-size: 0.85rem;
+            }
         </style>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
@@ -49,9 +62,63 @@
                             <table class="table align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th scope="col" style="width: 20%;">タグID</th>
-                                        <th scope="col">タグ名</th>
-                                        <th scope="col" style="width: 30%;">登録日時</th>
+                                        <th scope="col" style="width: 20%;">
+                                            <a href="{{ sort_links.id }}" class="table-sort-link" aria-label="タグIDで並べ替え">
+                                                <span>タグID</span>
+                                                {% if sort_field == 'id' %}
+                                                    {% if sort_dir == 'asc' %}
+                                                        <i class="bi bi-caret-up-fill table-sort-icon"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-caret-down-fill table-sort-icon"></i>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <i class="bi bi-arrow-down-up table-sort-icon text-muted"></i>
+                                                {% endif %}
+                                                <span class="visually-hidden">
+                                                    {% if sort_field == 'id' %}
+                                                        {% if sort_dir == 'asc' %}昇順{% else %}降順{% endif %}
+                                                    {% else %}ソート可能{% endif %}
+                                                </span>
+                                            </a>
+                                        </th>
+                                        <th scope="col">
+                                            <a href="{{ sort_links.name }}" class="table-sort-link" aria-label="タグ名で並べ替え">
+                                                <span>タグ名</span>
+                                                {% if sort_field == 'name' %}
+                                                    {% if sort_dir == 'asc' %}
+                                                        <i class="bi bi-caret-up-fill table-sort-icon"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-caret-down-fill table-sort-icon"></i>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <i class="bi bi-arrow-down-up table-sort-icon text-muted"></i>
+                                                {% endif %}
+                                                <span class="visually-hidden">
+                                                    {% if sort_field == 'name' %}
+                                                        {% if sort_dir == 'asc' %}昇順{% else %}降順{% endif %}
+                                                    {% else %}ソート可能{% endif %}
+                                                </span>
+                                            </a>
+                                        </th>
+                                        <th scope="col" style="width: 30%;">
+                                            <a href="{{ sort_links.created }}" class="table-sort-link" aria-label="登録日時で並べ替え">
+                                                <span>登録日時</span>
+                                                {% if sort_field == 'created' %}
+                                                    {% if sort_dir == 'asc' %}
+                                                        <i class="bi bi-caret-up-fill table-sort-icon"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-caret-down-fill table-sort-icon"></i>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <i class="bi bi-arrow-down-up table-sort-icon text-muted"></i>
+                                                {% endif %}
+                                                <span class="visually-hidden">
+                                                    {% if sort_field == 'created' %}
+                                                        {% if sort_dir == 'asc' %}昇順{% else %}降順{% endif %}
+                                                    {% else %}ソート可能{% endif %}
+                                                </span>
+                                            </a>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
