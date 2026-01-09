@@ -77,6 +77,14 @@ class SignupForm(forms.ModelForm):
         instance.full_name_kana = (
             f"{family_name_kana}{separator_kana}{given_name_kana}" or instance.full_name_kana
         )
+        instance.is_approved = False
+        instance.is_rejected = False
+        instance.rejection_reason = ""
+        instance.rejected_at = None
+        if not instance.verification_code:
+            instance.verification_code = None
+        if not instance.verification_expires_at:
+            instance.verification_expires_at = None
         if commit:
             instance.save()
         return instance

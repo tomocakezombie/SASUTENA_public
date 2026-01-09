@@ -1,11 +1,14 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import transaction
 from datetime import datetime, time
 
 from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -77,6 +80,25 @@ def _build_star_states(average_score):
     return states
 
 
+def _send_account_request_email(account_request, subject, message_lines):
+    recipient = (getattr(account_request, "email", "") or "").strip()
+    if not recipient:
+        return False
+
+    message = "\n".join(message_lines)
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient],
+            fail_silently=False,
+        )
+        return True
+    except Exception:
+        return False
+
+
 @login_required
 def admin_portal_list(request):
     if not _ensure_admin(request.user):
@@ -85,9 +107,10 @@ def admin_portal_list(request):
     base_requests = AccountRequest.objects.order_by("-request_date")
     unverified_requests = base_requests.filter(is_verified=False)
     verified_requests = base_requests.filter(is_verified=True)
-    
+
     new_account_request_count = verified_requests.filter(
-        is_approved=False
+        is_approved=False,
+        is_rejected=False,
     ).count()
     
     pending_products_qs = Product.objects.filter(
@@ -368,13 +391,134 @@ def approve_account_request(request, pk):
 
     with transaction.atomic():
         account_request.is_approved = True
-        account_request.save(update_fields=["is_approved"])
+        update_fields = ["is_approved"]
+
+        if getattr(account_request, "is_rejected", False):
+            account_request.is_rejected = False
+            account_request.rejection_reason = ""
+            account_request.rejected_at = None
+            update_fields.extend(["is_rejected", "rejection_reason", "rejected_at"])
+
+        account_request.save(update_fields=update_fields)
 
         if related_user and not related_user.is_active:
             related_user.is_active = True
             related_user.save(update_fields=["is_active"])
 
+    login_url = request.build_absolute_uri(reverse("login:login"))
+    email_sent = _send_account_request_email(
+        account_request,
+        "【Sasutena】アカウント申請承認のお知らせ",
+        [
+            f"{account_request.username} 様",
+            "",
+            "Sasutena Project へのアカウント申請が承認されました。",
+            "ログインページからサインインし、ご利用を開始してください。",
+            "",
+            f"ログインページ: {login_url}",
+            "",
+            "このメールに心当たりがない場合は破棄してください。",
+            "",
+            "Sasutena Project 運営",
+        ],
+    )
+
     messages.success(request, f"{account_request.username} の申請を承認しました。")
+    if not email_sent:
+        messages.warning(request, "承認通知メールの送信に失敗しました。メール設定をご確認ください。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def unapprove_account_request(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    account_request = get_object_or_404(AccountRequest, pk=pk)
+
+    if not account_request.is_approved:
+        messages.info(request, "この申請は承認されていません。")
+        return redirect("adminPortal:admin_portal_list")
+
+    user_model = get_user_model()
+    related_user = user_model.objects.filter(username=account_request.username).first()
+
+    with transaction.atomic():
+        account_request.is_approved = False
+        account_request.save(update_fields=["is_approved"])
+
+        if related_user and related_user.is_active:
+            related_user.is_active = False
+            related_user.save(update_fields=["is_active"])
+
+    messages.success(request, f"{account_request.username} の承認を取り消しました。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def reject_account_request(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    account_request = get_object_or_404(AccountRequest, pk=pk)
+
+    mode = request.POST.get("mode", "reject")
+
+    if account_request.is_approved:
+        messages.info(request, "承認済みの申請は却下できません。")
+        return redirect("adminPortal:admin_portal_list")
+
+    if mode == "undo":
+        if not account_request.is_rejected:
+            messages.info(request, "この申請は却下されていません。")
+            return redirect("adminPortal:admin_portal_list")
+
+        account_request.is_rejected = False
+        account_request.rejection_reason = ""
+        account_request.rejected_at = None
+        account_request.save(update_fields=["is_rejected", "rejection_reason", "rejected_at"])
+
+        messages.success(request, f"{account_request.username} の却下を解除しました。")
+        return redirect("adminPortal:admin_portal_list")
+
+    reason = (request.POST.get("reason", "") or "").strip()
+    if not reason:
+        messages.error(request, "却下理由を入力してください。")
+        return redirect("adminPortal:admin_portal_list")
+
+    account_request.is_rejected = True
+    account_request.rejection_reason = reason
+    account_request.rejected_at = timezone.now()
+    account_request.save(update_fields=["is_rejected", "rejection_reason", "rejected_at"])
+
+    user_model = get_user_model()
+    related_user = user_model.objects.filter(username=account_request.username).first()
+    if related_user and related_user.is_active:
+        related_user.is_active = False
+        related_user.save(update_fields=["is_active"])
+
+    email_sent = _send_account_request_email(
+        account_request,
+        "【Sasutena】アカウント申請の結果について",
+        [
+            f"{account_request.username} 様",
+            "",
+            "Sasutena Project へのアカウント申請を確認いたしましたが、今回は承認できませんでした。",
+            "以下の理由をご確認ください。",
+            "",
+            f"理由: {reason}",
+            "",
+            "内容にお心当たりがない場合や再申請をご希望の際は、再度情報をご確認のうえお申し込みください。",
+            "",
+            "Sasutena Project 運営",
+        ],
+    )
+
+    messages.success(request, f"{account_request.username} の申請を却下しました。")
+    if not email_sent:
+        messages.warning(request, "却下通知メールの送信に失敗しました。メール設定をご確認ください。")
     return redirect("adminPortal:admin_portal_list")
 
 
