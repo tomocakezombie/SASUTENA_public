@@ -142,8 +142,6 @@
       "tag_name": "要加熱",
       "created_t": "2025-01-01T03:00:00Z"
     }
-  }
-    }
   },
   {
     "model": "product.tagtype",
