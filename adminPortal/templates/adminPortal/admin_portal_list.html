@@ -242,12 +242,25 @@ html {
 
         <div class="card shadow-sm border-0" id="product-approval-section">
             <div class="card-body">
-                <h2 class="h5 mb-3">
-                    出品承認一覧
-                    {% if new_product_count > 0 %}
-                        <span class="badge text-bg-danger ms-2">{{ new_product_count }}件</span>
-                    {% endif %}
-                </h2>
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-2">
+                    <h2 class="h5 mb-0">
+                        出品承認一覧
+                        {% if new_product_count > 0 %}
+                            <span class="badge text-bg-danger ms-2">{{ new_product_count }}件</span>
+                        {% endif %}
+                    </h2>
+                    <form method="post" action="{% url 'adminPortal:toggle_auto_publish_setting' %}" class="d-inline-flex align-items-center gap-2">
+                        {% csrf_token %}
+                        <span class="text-muted small">現在: {% if auto_publish_enabled %}自動公開{% else %}承認後に公開{% endif %}</span>
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            {% if auto_publish_enabled %}
+                                自動公開を停止
+                            {% else %}
+                                新規出品を自動公開
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
                 <button
                     class="btn btn-sm btn-outline-secondary mb-3"
                     type="button"

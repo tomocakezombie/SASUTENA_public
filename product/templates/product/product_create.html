@@ -80,14 +80,44 @@
                 {% endfor %}
             </div>
             <div class="mb-4">
-                <label for="{{ form.tags.id_for_label }}" class="form-label fw-semibold">タグ</label>
-                {{ form.tags }}
-                {% if form.tags.field.queryset.exists %}
-                <div class="form-text">Ctrl（⌘）キーを押しながらクリックすると複数選択できます。</div>
+                <label for="tagInputEntry" class="form-label fw-semibold">タグ</label>
+                <div class="input-group">
+                    <input
+                        type="text"
+                        id="tagInputEntry"
+                        class="form-control"
+                        placeholder="タグ名を入力すると候補が表示されます"
+                        list="{{ form.tag_datalist_id }}"
+                        autocomplete="off"
+                    >
+                    <button type="button" class="btn btn-outline-secondary" id="tagInputClear">クリア</button>
+                </div>
+                <datalist id="{{ form.tag_datalist_id }}">
+                    {% for name in tag_suggestions %}
+                        <option value="{{ name }}"></option>
+                    {% endfor %}
+                </datalist>
+                {% if tag_suggestions %}
+                    <div class="form-text small text-muted">候補から選択するか、タグ名を入力して Enter で追加します（複数可）。</div>
                 {% else %}
-                <div class="form-text text-muted">利用可能なタグがまだ登録されていません。</div>
+                    <div class="form-text text-muted">利用可能なタグがまだ登録されていません。</div>
                 {% endif %}
-                {% for error in form.tags.errors %}
+                <div class="mt-2">
+                    <div class="small text-muted mb-1">選択済みのタグ</div>
+                    <div id="selectedTagList" class="d-flex flex-wrap gap-2">
+                        {% for token in selected_tags %}
+                            <span class="badge text-bg-primary d-inline-flex align-items-center gap-2">
+                                <span>{{ token }}</span>
+                                <button type="button" class="btn-close btn-close-white btn-sm remove-tag" data-token="{{ token }}" aria-label="タグを削除"></button>
+                            </span>
+                        {% empty %}
+                            <span class="text-muted small">タグは未選択です。</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div id="tagInputError" class="text-danger small mt-2" role="alert"></div>
+                {{ form.tag_input }}
+                {% for error in form.tag_input.errors %}
                 <div class="text-danger small">{{ error }}</div>
                 {% endfor %}
             </div>
@@ -115,4 +145,181 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{{ tag_suggestions|json_script:"tagAllowedData" }}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const entryInput = document.getElementById("tagInputEntry");
+    const storageField = document.querySelector('[data-tag-storage="1"]');
+    const tagList = document.getElementById("selectedTagList");
+    const clearButton = document.getElementById("tagInputClear");
+    const errorBox = document.getElementById("tagInputError");
+    const allowedElement = document.getElementById("tagAllowedData");
+
+    if (!storageField || !tagList) {
+        return;
+    }
+
+    const allowedNames = allowedElement ? JSON.parse(allowedElement.textContent) : [];
+    const allowedMap = new Map(
+        allowedNames.map((name) => [String(name).toLowerCase(), name])
+    );
+
+    if (entryInput && allowedNames.length === 0) {
+        entryInput.disabled = true;
+        entryInput.placeholder = "利用可能なタグがまだ登録されていません";
+    }
+
+    const normalizeToken = (token) => token.replace(/^#/, "").trim();
+
+    const extractTokens = (source) => {
+        return (source || "")
+            .split(/[\s,]+/)
+            .map(normalizeToken)
+            .filter((value) => value.length > 0);
+    };
+
+    const uniqueTokens = (tokens) => {
+        const seen = new Set();
+        const ordered = [];
+        tokens.forEach((token) => {
+            if (!seen.has(token)) {
+                seen.add(token);
+                ordered.push(token);
+            }
+        });
+        return ordered;
+    };
+
+    const loadTokens = () => uniqueTokens(extractTokens(storageField.value));
+
+    const saveTokens = (tokens) => {
+        storageField.value = uniqueTokens(tokens).join(" ");
+        renderTokens();
+    };
+
+    const showError = (message) => {
+        if (!errorBox) {
+            return;
+        }
+        errorBox.textContent = message || "";
+    };
+
+    const clearError = () => showError("");
+
+    const renderTokens = () => {
+        const tokens = loadTokens();
+        tagList.innerHTML = "";
+
+        if (tokens.length === 0) {
+            const empty = document.createElement("span");
+            empty.className = "text-muted small";
+            empty.textContent = "タグは未選択です。";
+            tagList.appendChild(empty);
+            return;
+        }
+
+        tokens.forEach((token) => {
+            const badge = document.createElement("span");
+            badge.className = "badge text-bg-primary d-inline-flex align-items-center gap-2";
+
+            const label = document.createElement("span");
+            label.textContent = token;
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "btn-close btn-close-white btn-sm remove-tag";
+            remove.dataset.token = token;
+            remove.setAttribute("aria-label", "タグを削除");
+
+            badge.appendChild(label);
+            badge.appendChild(remove);
+            tagList.appendChild(badge);
+        });
+    };
+
+    const addToken = (rawValue) => {
+        const normalized = normalizeToken(rawValue);
+        if (!normalized) {
+            return;
+        }
+
+        const canonical = allowedMap.get(normalized.toLowerCase());
+        if (!canonical) {
+            showError("登録されていないタグは利用できません。");
+            if (entryInput) {
+                entryInput.focus();
+            }
+            return;
+        }
+
+        const tokens = loadTokens();
+        if (!tokens.includes(canonical)) {
+            tokens.push(canonical);
+        }
+        saveTokens(tokens);
+        clearError();
+    };
+
+    tagList.addEventListener("click", (event) => {
+        if (!(event.target instanceof HTMLElement) || !event.target.classList.contains("remove-tag")) {
+            return;
+        }
+        const token = event.target.dataset.token;
+        const tokens = loadTokens().filter((value) => value !== token);
+        saveTokens(tokens);
+        if (entryInput) {
+            entryInput.focus();
+        }
+    });
+
+    if (entryInput) {
+        entryInput.addEventListener("change", () => {
+            const value = entryInput.value;
+            addToken(value);
+            entryInput.value = "";
+        });
+
+        entryInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                const value = entryInput.value;
+                addToken(value);
+                entryInput.value = "";
+            }
+        });
+
+        entryInput.addEventListener("input", () => {
+            clearError();
+        });
+    }
+
+    if (clearButton) {
+        clearButton.addEventListener("click", () => {
+            saveTokens([]);
+            if (entryInput) {
+                entryInput.value = "";
+                entryInput.focus();
+            }
+            clearError();
+        });
+    }
+
+    const formElement = entryInput ? entryInput.closest("form") : null;
+    if (formElement && entryInput) {
+        formElement.addEventListener("submit", () => {
+            if (entryInput.value.trim().length > 0) {
+                addToken(entryInput.value);
+                entryInput.value = "";
+                clearError();
+            }
+        });
+    }
+
+    renderTokens();
+});
+</script>
 {% endblock %}

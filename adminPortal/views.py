@@ -19,7 +19,7 @@ from accounts.views import build_status_rows
 from comunicate.models import Message
 from .forms import TagTypeForm
 
-from .models import ExpirationNoticeSetting
+from .models import ExpirationNoticeSetting, ProductApprovalSetting
 from .forms import ExpirationNoticeSettingForm
 
 
@@ -119,6 +119,7 @@ def admin_portal_list(request):
         rejected_at__isnull=True,
     )
     new_product_count = pending_products_qs.count()
+    approval_setting = ProductApprovalSetting.get_solo()
     
     products = list(Product.objects.select_related("user").order_by("-created_at"))
     _attach_product_profiles(products)
@@ -139,6 +140,7 @@ def admin_portal_list(request):
             "products": products,
             "new_account_request_count": new_account_request_count,
             "new_product_count": new_product_count,
+            "auto_publish_enabled": approval_setting.auto_publish_new_products,
         },
     )
 
@@ -519,6 +521,24 @@ def reject_account_request(request, pk):
     messages.success(request, f"{account_request.username} の申請を却下しました。")
     if not email_sent:
         messages.warning(request, "却下通知メールの送信に失敗しました。メール設定をご確認ください。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def toggle_auto_publish_setting(request):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    setting = ProductApprovalSetting.get_solo()
+    setting.auto_publish_new_products = not setting.auto_publish_new_products
+    setting.save(update_fields=["auto_publish_new_products", "updated_at"])
+
+    if setting.auto_publish_new_products:
+        messages.success(request, "新規出品は自動的に公開されるようになりました。")
+    else:
+        messages.success(request, "新規出品は承認後に公開する設定に戻しました。")
+
     return redirect("adminPortal:admin_portal_list")
 
 

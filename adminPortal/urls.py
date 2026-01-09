@@ -11,6 +11,7 @@ urlpatterns = [
     path("requests/<int:pk>/approve/", views.approve_account_request, name="approve_account_request"),
     path("requests/<int:pk>/unapprove/", views.unapprove_account_request, name="unapprove_account_request"),
     path("requests/<int:pk>/reject/", views.reject_account_request, name="reject_account_request"),
+    path("products/auto-publish/toggle/", views.toggle_auto_publish_setting, name="toggle_auto_publish_setting"),
     path("products/<int:pk>/toggle/", views.toggle_product_visibility, name="toggle_product_visibility"),
     path("products/<int:pk>/reject/", views.reject_product, name="reject_product"),
     path("messages/", views.admin_message_monitor, name="admin_message_monitor"),
