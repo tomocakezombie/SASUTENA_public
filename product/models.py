@@ -64,6 +64,9 @@ class ProductApplication(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
     )
+    
+    is_checked_by_producer = models.BooleanField(default=False)
+
 
     class Meta:
         verbose_name = "申込み"
