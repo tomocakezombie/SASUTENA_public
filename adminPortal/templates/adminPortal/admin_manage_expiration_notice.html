@@ -2,6 +2,7 @@
 
 {% block content %}
 <h1>締め切り間近通知設定</h1>
+<a href="{% url 'adminPortal:admin_portal_list' %}" class="btn btn-outline-secondary">ダッシュボードに戻る</a>
 <form method="post" class="needs-validation" novalidate>
     {% csrf_token %}
     {{ form.non_field_errors }}
