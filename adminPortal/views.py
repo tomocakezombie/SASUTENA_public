@@ -206,8 +206,9 @@ def manage_tags(request):
     if not _ensure_admin(request.user):
         return redirect("login:index")
 
-    sort_field = request.GET.get("sort", "name")
+    sort_field = request.GET.get("sort", "id")
     sort_dir = request.GET.get("dir", "asc")
+    search_query = (request.GET.get("q") or "").strip()
 
     field_map = {
         "id": "tag_id",
@@ -224,7 +225,10 @@ def manage_tags(request):
         order_expression = f"-{order_expression}"
 
     form = TagTypeForm(request.POST or None)
-    tag_list = TagType.objects.order_by(order_expression)
+    tag_qs = TagType.objects.all()
+    if search_query:
+        tag_qs = tag_qs.filter(tag_name__icontains=search_query)
+    tag_list = tag_qs.order_by(order_expression)
 
     if request.method == "POST":
         if form.is_valid():
@@ -261,8 +265,52 @@ def manage_tags(request):
             "sort_field": sort_field,
             "sort_dir": sort_dir,
             "sort_links": sort_links,
+            "redirect_target": request.get_full_path(),
+            "search_query": search_query,
         },
     )
+
+
+@login_required
+@require_POST
+def toggle_tag_status(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    tag = get_object_or_404(TagType, pk=pk)
+    desired = request.POST.get("is_active")
+
+    redirect_url = request.POST.get("redirect") or reverse("adminPortal:manage_tags")
+
+    if desired not in {"0", "1"}:
+        messages.error(request, "タグの状態を更新できませんでした。")
+        return redirect(redirect_url)
+
+    tag.is_active = desired == "1"
+    tag.save(update_fields=["is_active"])
+
+    if tag.is_active:
+        messages.success(request, f"タグ『{tag.tag_name}』を有効にしました。")
+    else:
+        messages.info(request, f"タグ『{tag.tag_name}』を無効にしました。")
+
+    return redirect(redirect_url)
+
+
+@login_required
+@require_POST
+def delete_tag(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    tag = get_object_or_404(TagType, pk=pk)
+    redirect_url = request.POST.get("redirect") or reverse("adminPortal:manage_tags")
+
+    tag_name = tag.tag_name
+    tag.delete()
+
+    messages.success(request, f"タグ『{tag_name}』を削除しました。")
+    return redirect(redirect_url)
 
 
 @login_required

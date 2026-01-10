@@ -16,5 +16,7 @@ urlpatterns = [
     path("products/<int:pk>/reject/", views.reject_product, name="reject_product"),
     path("messages/", views.admin_message_monitor, name="admin_message_monitor"),
     path("tags/", views.manage_tags, name="manage_tags"),
+    path("tags/<int:pk>/toggle-status/", views.toggle_tag_status, name="toggle_tag_status"),
+    path("tags/<int:pk>/delete/", views.delete_tag, name="delete_tag"),
     path('expiration_notice/', views.manage_expiration_notice, name='manage_expiration_notice'),
 ]
