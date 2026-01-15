@@ -48,14 +48,15 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._tag_objects = []
-        self.tag_suggestions = list(TagType.objects.order_by("tag_name").values_list("tag_name", flat=True))
+        active_tags = TagType.objects.filter(is_active=True).order_by("tag_name")
+        self.tag_suggestions = list(active_tags.values_list("tag_name", flat=True))
         self.tag_datalist_id = "tag-suggestions"
 
         if not self.is_bound:
             instance_tags = []
             if self.instance.pk:
                 instance_tags = list(
-                    self.instance.tags.order_by("tag_name").values_list("tag_name", flat=True)
+                    self.instance.tags.filter(is_active=True).order_by("tag_name").values_list("tag_name", flat=True)
                 )
             initial_value = self.initial.get("tag_input") or self.fields["tag_input"].initial
             if not initial_value and instance_tags:
@@ -179,13 +180,22 @@ class ProductForm(forms.ModelForm):
         tokens = self._parse_tokens(raw_text)
         tag_objects = []
         missing_tokens = []
+        inactive_tokens = []
         for token in tokens:
-            tag = TagType.objects.filter(tag_name__iexact=token).first()
+            tag = TagType.objects.filter(tag_name__iexact=token, is_active=True).first()
             if tag:
                 if tag not in tag_objects:
                     tag_objects.append(tag)
             else:
-                missing_tokens.append(token)
+                if TagType.objects.filter(tag_name__iexact=token, is_active=False).exists():
+                    inactive_tokens.append(token)
+                else:
+                    missing_tokens.append(token)
+        if inactive_tokens:
+            self.add_error(
+                "tag_input",
+                "無効化されたタグがあります: " + ", ".join(inactive_tokens),
+            )
         if missing_tokens:
             self.add_error(
                 "tag_input",
