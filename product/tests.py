@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.urls import reverse
 from datetime import timedelta
 from django.contrib.auth import get_user_model
-from .models import Product
+from .models import Product, TagType
 from .forms import ProductForm
 from adminPortal.models import ExpirationNoticeSetting
 
@@ -46,6 +46,39 @@ class ProductAppTests(TestCase):
         form = ProductForm(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("end_date", form.errors)
+
+    def test_productform_rejects_inactive_tag(self):
+        inactive = TagType.objects.create(tag_name="無効タグ", is_active=False)
+        start = timezone.now().date()
+        data = {
+            "item_name": "x",
+            "number": 1,
+            "description": "d",
+            "start_date": start.isoformat(),
+            "end_date": start.isoformat(),
+            "start_clock": "00:00",
+            "end_clock": "00:00",
+            "tag_input": inactive.tag_name,
+        }
+        form = ProductForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("tag_input", form.errors)
+
+    def test_productform_accepts_active_tag(self):
+        TagType.objects.create(tag_name="有効タグ", is_active=True)
+        start = timezone.now().date()
+        data = {
+            "item_name": "x",
+            "number": 1,
+            "description": "d",
+            "start_date": start.isoformat(),
+            "end_date": start.isoformat(),
+            "start_clock": "00:00",
+            "end_clock": "00:00",
+            "tag_input": "有効タグ",
+        }
+        form = ProductForm(data=data)
+        self.assertTrue(form.is_valid())
 
     def test_get_expiring_products_respects_settings(self):
         """

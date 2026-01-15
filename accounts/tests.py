@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from .models import UserProfile, UserEvaluation
 from .forms import UserEvaluationForm
+import json
 
 
 class AccountsAppTests(TestCase):
