@@ -111,6 +111,17 @@ class AdminPortalView1Tests(TestCase):
         url = reverse("adminPortal:manage_tags")
         self.assertEqual(url, "/admin-portal/tags/")
 
+    def test_toggle_tag_status_url(self):
+        """
+        # テスト関数名: test_toggle_tag_status_url
+        # 対象URL: adminPortal:toggle_tag_status
+        # テスト観点: URLの逆引き確認
+        # 入力値: なし
+        # 期待結果: 正しいURLが生成される
+        """
+        url = reverse("adminPortal:toggle_tag_status", args=[1])
+        self.assertEqual(url, "/admin-portal/tags/1/toggle-status/")
+
     def test_manage_expiration_notice_url(self):
         """
         # テスト関数名: test_manage_expiration_notice_url
@@ -172,6 +183,87 @@ class AdminPortalView2Tests(TestCase):
 
         self.product.refresh_from_db()
         self.assertFalse(self.product.publish)
+
+    def test_toggle_tag_status_deactivate(self):
+        self.client.login(username="adminuser", password="pass")
+        tag = TagType.objects.create(tag_name="有機野菜")
+
+        url = reverse("adminPortal:toggle_tag_status", args=[tag.pk])
+        resp = self.client.post(url, {"is_active": "0"})
+
+        self.assertEqual(resp.status_code, 302)
+        tag.refresh_from_db()
+        self.assertFalse(tag.is_active)
+
+    def test_toggle_tag_status_reactivate(self):
+        self.client.login(username="adminuser", password="pass")
+        tag = TagType.objects.create(tag_name="特別栽培", is_active=False)
+
+        url = reverse("adminPortal:toggle_tag_status", args=[tag.pk])
+        resp = self.client.post(url, {"is_active": "1"})
+
+        self.assertEqual(resp.status_code, 302)
+        tag.refresh_from_db()
+        self.assertTrue(tag.is_active)
+
+    def test_manage_tags_default_sort_by_id(self):
+        self.client.login(username="adminuser", password="pass")
+        first = TagType.objects.create(tag_name="Bタグ")
+        second = TagType.objects.create(tag_name="Aタグ")
+
+        url = reverse("adminPortal:manage_tags")
+        resp = self.client.get(url)
+
+        self.assertEqual(resp.status_code, 200)
+        tags = list(resp.context["tag_list"])
+        self.assertEqual([t.pk for t in tags[:2]], [first.pk, second.pk])
+        self.assertEqual(resp.context["sort_field"], "id")
+        self.assertEqual(resp.context["sort_dir"], "asc")
+
+    def test_toggle_tag_status_requires_admin(self):
+        self.client.login(username="normaluser", password="pass")
+        tag = TagType.objects.create(tag_name="減農薬")
+
+        url = reverse("adminPortal:toggle_tag_status", args=[tag.pk])
+        resp = self.client.post(url, {"is_active": "0"})
+
+        self.assertEqual(resp.status_code, 302)
+        tag.refresh_from_db()
+        self.assertTrue(tag.is_active)
+
+    def test_delete_tag_removes_record(self):
+        self.client.login(username="adminuser", password="pass")
+        tag = TagType.objects.create(tag_name="削除用")
+
+        url = reverse("adminPortal:delete_tag", args=[tag.pk])
+        resp = self.client.post(url)
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(TagType.objects.filter(pk=tag.pk).exists())
+
+    def test_delete_tag_requires_admin(self):
+        self.client.login(username="normaluser", password="pass")
+        tag = TagType.objects.create(tag_name="削除失敗")
+
+        url = reverse("adminPortal:delete_tag", args=[tag.pk])
+        resp = self.client.post(url)
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(TagType.objects.filter(pk=tag.pk).exists())
+
+    def test_manage_tags_search_filters_results(self):
+        self.client.login(username="adminuser", password="pass")
+        matched = TagType.objects.create(tag_name="有機野菜セット")
+        TagType.objects.create(tag_name="減農薬りんご")
+
+        url = reverse("adminPortal:manage_tags")
+        resp = self.client.get(url, {"q": "有機"})
+
+        self.assertEqual(resp.status_code, 200)
+        tags = list(resp.context["tag_list"])
+        self.assertIn(matched, tags)
+        self.assertEqual(len(tags), 1)
+        self.assertEqual(resp.context["search_query"], "有機")
 
     def test_reject_product_with_reason(self):
         self.client.login(username="adminuser", password="pass")

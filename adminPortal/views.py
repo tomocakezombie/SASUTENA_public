@@ -1,11 +1,14 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import transaction
 from datetime import datetime, time
 
 from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -16,7 +19,7 @@ from accounts.views import build_status_rows
 from comunicate.models import Message
 from .forms import TagTypeForm
 
-from .models import ExpirationNoticeSetting
+from .models import ExpirationNoticeSetting, ProductApprovalSetting
 from .forms import ExpirationNoticeSettingForm
 
 
@@ -77,6 +80,25 @@ def _build_star_states(average_score):
     return states
 
 
+def _send_account_request_email(account_request, subject, message_lines):
+    recipient = (getattr(account_request, "email", "") or "").strip()
+    if not recipient:
+        return False
+
+    message = "\n".join(message_lines)
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient],
+            fail_silently=False,
+        )
+        return True
+    except Exception:
+        return False
+
+
 @login_required
 def admin_portal_list(request):
     if not _ensure_admin(request.user):
@@ -85,9 +107,10 @@ def admin_portal_list(request):
     base_requests = AccountRequest.objects.order_by("-request_date")
     unverified_requests = base_requests.filter(is_verified=False)
     verified_requests = base_requests.filter(is_verified=True)
-    
+
     new_account_request_count = verified_requests.filter(
-        is_approved=False
+        is_approved=False,
+        is_rejected=False,
     ).count()
     
     pending_products_qs = Product.objects.filter(
@@ -96,6 +119,7 @@ def admin_portal_list(request):
         rejected_at__isnull=True,
     )
     new_product_count = pending_products_qs.count()
+    approval_setting = ProductApprovalSetting.get_solo()
     
     products = list(Product.objects.select_related("user").order_by("-created_at"))
     _attach_product_profiles(products)
@@ -116,6 +140,7 @@ def admin_portal_list(request):
             "products": products,
             "new_account_request_count": new_account_request_count,
             "new_product_count": new_product_count,
+            "auto_publish_enabled": approval_setting.auto_publish_new_products,
         },
     )
 
@@ -181,15 +206,55 @@ def manage_tags(request):
     if not _ensure_admin(request.user):
         return redirect("login:index")
 
+    sort_field = request.GET.get("sort", "id")
+    sort_dir = request.GET.get("dir", "asc")
+    search_query = (request.GET.get("q") or "").strip()
+
+    field_map = {
+        "id": "tag_id",
+        "name": "tag_name",
+        "created": "created_t",
+    }
+    if sort_field not in field_map:
+        sort_field = "name"
+    if sort_dir not in {"asc", "desc"}:
+        sort_dir = "asc"
+
+    order_expression = field_map[sort_field]
+    if sort_dir == "desc":
+        order_expression = f"-{order_expression}"
+
     form = TagTypeForm(request.POST or None)
-    tag_list = TagType.objects.order_by("tag_name")
+    tag_qs = TagType.objects.all()
+    if search_query:
+        tag_qs = tag_qs.filter(tag_name__icontains=search_query)
+    tag_list = tag_qs.order_by(order_expression)
 
     if request.method == "POST":
         if form.is_valid():
             form.save()
             messages.success(request, "タグを追加しました。")
-            return redirect("adminPortal:manage_tags")
+            redirect_url = reverse("adminPortal:manage_tags")
+            if request.GET:
+                redirect_url = f"{redirect_url}?{request.GET.urlencode()}"
+            return redirect(redirect_url)
         messages.error(request, "タグを追加できませんでした。内容を確認してください。")
+
+    base_url = reverse("adminPortal:manage_tags")
+
+    def _sort_link(field_key):
+        direction = "desc" if sort_field == field_key and sort_dir == "asc" else "asc"
+        query = request.GET.copy()
+        query["sort"] = field_key
+        query["dir"] = direction
+        encoded = query.urlencode()
+        return f"{base_url}?{encoded}" if encoded else base_url
+
+    sort_links = {
+        "id": _sort_link("id"),
+        "name": _sort_link("name"),
+        "created": _sort_link("created"),
+    }
 
     return render(
         request,
@@ -197,8 +262,55 @@ def manage_tags(request):
         {
             "form": form,
             "tag_list": tag_list,
+            "sort_field": sort_field,
+            "sort_dir": sort_dir,
+            "sort_links": sort_links,
+            "redirect_target": request.get_full_path(),
+            "search_query": search_query,
         },
     )
+
+
+@login_required
+@require_POST
+def toggle_tag_status(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    tag = get_object_or_404(TagType, pk=pk)
+    desired = request.POST.get("is_active")
+
+    redirect_url = request.POST.get("redirect") or reverse("adminPortal:manage_tags")
+
+    if desired not in {"0", "1"}:
+        messages.error(request, "タグの状態を更新できませんでした。")
+        return redirect(redirect_url)
+
+    tag.is_active = desired == "1"
+    tag.save(update_fields=["is_active"])
+
+    if tag.is_active:
+        messages.success(request, f"タグ『{tag.tag_name}』を有効にしました。")
+    else:
+        messages.info(request, f"タグ『{tag.tag_name}』を無効にしました。")
+
+    return redirect(redirect_url)
+
+
+@login_required
+@require_POST
+def delete_tag(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    tag = get_object_or_404(TagType, pk=pk)
+    redirect_url = request.POST.get("redirect") or reverse("adminPortal:manage_tags")
+
+    tag_name = tag.tag_name
+    tag.delete()
+
+    messages.success(request, f"タグ『{tag_name}』を削除しました。")
+    return redirect(redirect_url)
 
 
 @login_required
@@ -368,13 +480,152 @@ def approve_account_request(request, pk):
 
     with transaction.atomic():
         account_request.is_approved = True
-        account_request.save(update_fields=["is_approved"])
+        update_fields = ["is_approved"]
+
+        if getattr(account_request, "is_rejected", False):
+            account_request.is_rejected = False
+            account_request.rejection_reason = ""
+            account_request.rejected_at = None
+            update_fields.extend(["is_rejected", "rejection_reason", "rejected_at"])
+
+        account_request.save(update_fields=update_fields)
 
         if related_user and not related_user.is_active:
             related_user.is_active = True
             related_user.save(update_fields=["is_active"])
 
+    login_url = request.build_absolute_uri(reverse("login:login"))
+    email_sent = _send_account_request_email(
+        account_request,
+        "【Sasutena】アカウント申請承認のお知らせ",
+        [
+            f"{account_request.username} 様",
+            "",
+            "Sasutena Project へのアカウント申請が承認されました。",
+            "ログインページからサインインし、ご利用を開始してください。",
+            "",
+            f"ログインページ: {login_url}",
+            "",
+            "このメールに心当たりがない場合は破棄してください。",
+            "",
+            "Sasutena Project 運営",
+        ],
+    )
+
     messages.success(request, f"{account_request.username} の申請を承認しました。")
+    if not email_sent:
+        messages.warning(request, "承認通知メールの送信に失敗しました。メール設定をご確認ください。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def unapprove_account_request(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    account_request = get_object_or_404(AccountRequest, pk=pk)
+
+    if not account_request.is_approved:
+        messages.info(request, "この申請は承認されていません。")
+        return redirect("adminPortal:admin_portal_list")
+
+    user_model = get_user_model()
+    related_user = user_model.objects.filter(username=account_request.username).first()
+
+    with transaction.atomic():
+        account_request.is_approved = False
+        account_request.save(update_fields=["is_approved"])
+
+        if related_user and related_user.is_active:
+            related_user.is_active = False
+            related_user.save(update_fields=["is_active"])
+
+    messages.success(request, f"{account_request.username} の承認を取り消しました。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def reject_account_request(request, pk):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    account_request = get_object_or_404(AccountRequest, pk=pk)
+
+    mode = request.POST.get("mode", "reject")
+
+    if account_request.is_approved:
+        messages.info(request, "承認済みの申請は却下できません。")
+        return redirect("adminPortal:admin_portal_list")
+
+    if mode == "undo":
+        if not account_request.is_rejected:
+            messages.info(request, "この申請は却下されていません。")
+            return redirect("adminPortal:admin_portal_list")
+
+        account_request.is_rejected = False
+        account_request.rejection_reason = ""
+        account_request.rejected_at = None
+        account_request.save(update_fields=["is_rejected", "rejection_reason", "rejected_at"])
+
+        messages.success(request, f"{account_request.username} の却下を解除しました。")
+        return redirect("adminPortal:admin_portal_list")
+
+    reason = (request.POST.get("reason", "") or "").strip()
+    if not reason:
+        messages.error(request, "却下理由を入力してください。")
+        return redirect("adminPortal:admin_portal_list")
+
+    account_request.is_rejected = True
+    account_request.rejection_reason = reason
+    account_request.rejected_at = timezone.now()
+    account_request.save(update_fields=["is_rejected", "rejection_reason", "rejected_at"])
+
+    user_model = get_user_model()
+    related_user = user_model.objects.filter(username=account_request.username).first()
+    if related_user and related_user.is_active:
+        related_user.is_active = False
+        related_user.save(update_fields=["is_active"])
+
+    email_sent = _send_account_request_email(
+        account_request,
+        "【Sasutena】アカウント申請の結果について",
+        [
+            f"{account_request.username} 様",
+            "",
+            "Sasutena Project へのアカウント申請を確認いたしましたが、今回は承認できませんでした。",
+            "以下の理由をご確認ください。",
+            "",
+            f"理由: {reason}",
+            "",
+            "内容にお心当たりがない場合や再申請をご希望の際は、再度情報をご確認のうえお申し込みください。",
+            "",
+            "Sasutena Project 運営",
+        ],
+    )
+
+    messages.success(request, f"{account_request.username} の申請を却下しました。")
+    if not email_sent:
+        messages.warning(request, "却下通知メールの送信に失敗しました。メール設定をご確認ください。")
+    return redirect("adminPortal:admin_portal_list")
+
+
+@login_required
+@require_POST
+def toggle_auto_publish_setting(request):
+    if not _ensure_admin(request.user):
+        return redirect("login:index")
+
+    setting = ProductApprovalSetting.get_solo()
+    setting.auto_publish_new_products = not setting.auto_publish_new_products
+    setting.save(update_fields=["auto_publish_new_products", "updated_at"])
+
+    if setting.auto_publish_new_products:
+        messages.success(request, "新規出品は自動的に公開されるようになりました。")
+    else:
+        messages.success(request, "新規出品は承認後に公開する設定に戻しました。")
+
     return redirect("adminPortal:admin_portal_list")
 
 

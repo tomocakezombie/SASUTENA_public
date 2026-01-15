@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, OuterRef
 
 from accounts.models import UserProfile
 
@@ -15,8 +15,12 @@ from .mentions import sync_comment_mentions
 
 from datetime import timedelta
 
-from adminPortal.models import ExpirationNoticeSetting
+from adminPortal.models import ExpirationNoticeSetting, ProductApprovalSetting
 from django.core.paginator import Paginator
+from django.db.models import Count
+
+
+
 
 def _get_profiles_map(user_ids):
     """Return a mapping of user_id to profile for given users."""
@@ -90,20 +94,39 @@ def product_create(request):
 
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
-        print("フォーム送信を受け取りました")
         if form.is_valid():
-            print("フォームは有効です")
             product = form.save(commit=False)
             product.user = request.user
+            if ProductApprovalSetting.is_auto_publish_enabled():
+                product.publish = True
+                product.valid = True
+                if not product.published_at:
+                    product.published_at = timezone.now()
             product.save()
             form.save_m2m()
+            form.save_tags(product)
             return redirect('product:producer_product_list')
-        print("フォームは無効です")
-        return render(request, 'product/product_create.html', {'form': form})
+        return render(
+            request,
+            'product/product_create.html',
+            {
+                'form': form,
+                'tag_suggestions': form.tag_suggestions,
+                'selected_tags': form.get_selected_tag_tokens(),
+            },
+        )
     else:
         form = ProductForm()
 
-    return render(request, 'product/product_create.html', {'form': form})
+    return render(
+        request,
+        'product/product_create.html',
+        {
+            'form': form,
+            'tag_suggestions': form.tag_suggestions,
+            'selected_tags': form.get_selected_tag_tokens(),
+        },
+    )
 
 @login_required
 def product_list(request):
@@ -293,6 +316,16 @@ def producer_product_list(request):
     )
     if redirect_response:
         return redirect_response
+    
+    # 生産者宛ての未完了商品の申込み数
+    pending_application_count = ProductApplication.objects.filter(
+        product__user=request.user,
+        product__completed=False,
+        apply_status=ProductApplication.STATUS_PENDING,
+        is_checked_by_producer=False,
+    ).count()
+
+
 
     user = request.user
     #自分の出品商品一覧
@@ -321,6 +354,21 @@ def producer_product_list(request):
                 .replace("{{user}}", user_display)
                 .replace("{{item}}", product.item_name)
             )
+            
+    my_products = Product.objects.filter(user=user).annotate(
+        pending_application_count=Count(
+            "applications",
+            filter=Q(
+                applications__apply_status=ProductApplication.STATUS_PENDING,
+                applications__is_checked_by_producer=False,
+            ),
+        )
+    ).annotate(
+        has_new_application=Q(pending_application_count__gt=0)
+    ).order_by('-created_at')
+
+
+
 
         
     return render(request, 'product/producer_product_list.html', {
@@ -328,6 +376,7 @@ def producer_product_list(request):
         'all_products': all_products,
         'expiring_products': expiring_products,
         'expiration_notice': notice,
+        'pending_application_count': pending_application_count,
     })
     
 @login_required
@@ -340,9 +389,19 @@ def product_detail(request, pk):
     if redirect_response:
         return redirect_response
 
-    product = get_object_or_404(Product, pk=pk)
+    product = get_object_or_404(
+        Product.objects.prefetch_related("tags"),
+        pk=pk,
+    )
     _attach_owner_profiles([product])
     is_owner = product.user == request.user
+    if is_owner:
+        ProductApplication.objects.filter(
+            product=product,
+            apply_status=ProductApplication.STATUS_PENDING,
+            is_checked_by_producer=False,
+        ).update(is_checked_by_producer=True)
+
     user_role = getattr(request.user, 'role', '')
     consumer_roles = {'consumer', 'guest', 'user'}
     applications = product.applications.select_related('user')
@@ -409,6 +468,7 @@ def product_detail(request, pk):
 
     return render(request, 'product/product_detail.html', {
         'product': product,
+        'product_tags': list(product.tags.order_by("tag_name")),
         'is_owner': is_owner,
         'applications': applications,
         'show_apply_button': can_apply and user_application is None,

@@ -8,6 +8,11 @@
         max-height: 60vh;
         overflow-y: auto;
     }
+
+    .product-highlight {
+        background-color: #e8f2ff;
+        transition: background-color 0.4s ease;
+    }
 </style>
 <section class="py-4">
     {% if expiring_products %}
@@ -28,15 +33,34 @@
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
                 <div>
                     <p class="text-muted small mb-1">ログイン中</p>
-                    <h1 class="h4 fw-bold mb-2">{{ user.profile.nick_name|default:user.username }} さん</h1>
-                    <p class="text-muted mb-0">生産者向けダッシュボードです。新しい出品登録や進行中の申込状況をここで確認できます。</p>
+
+                    <!-- 名前 + 通知 -->
+                    <div class="d-flex align-items-center gap-3">
+                        <h1 class="h4 fw-bold mb-0">
+                            {{ user.profile.nick_name|default:user.username }} さん
+                        </h1>
+
+                        {% if pending_application_count > 0 %}
+                            <span class="badge rounded-pill bg-danger">
+                                新しい申込み {{ pending_application_count }} 件
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-muted mb-0 mt-2">
+                        生産者向けダッシュボードです。新しい出品登録や進行中の申込状況をここで確認できます。
+                    </p>
                 </div>
+
                 <div class="ms-md-auto d-flex gap-2">
-                    <a class="btn btn-primary btn-lg" href="{% url 'product:product_create' %}">商品を登録</a>
+                    <a class="btn btn-primary btn-lg" href="{% url 'product:product_create' %}">
+                        商品を登録
+                    </a>
                 </div>
             </div>
         </div>
     </div>
+
 
     <div class="card border-0 shadow-sm mb-5">
         <div class="card-header bg-white py-3">
@@ -52,7 +76,7 @@
                     {% if my_products %}
                         <div class="list-group list-group-flush product-list-scroll">
                     {% for product in my_products %}
-                        <article class="list-group-item py-4 px-3">
+                        <article class="list-group-item py-4 px-3 {% if product.has_new_application %}product-highlight{% endif %}">
                             <div class="row g-3 align-items-start">
                                 <div class="col-auto">
                                     {% if product.item_image %}
@@ -174,6 +198,12 @@
                                         {% else %}
                                             <span class="badge bg-info text-dark">受付中</span>
                                         {% endif %}
+                                        {% if product.pending_application_count > 0 %}
+                                            <span class="badge bg-danger">
+                                                申込み {{ product.pending_application_count }} 件
+                                            </span>
+                                        {% endif %}
+
                                     </div>
                                     <div class="d-flex align-items-center gap-2 text-muted small mb-2">
                                         <span>出品者:</span>

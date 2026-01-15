@@ -7,6 +7,8 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from .models import Product, TagType
+from .forms import ProductForm
 from adminPortal.models import ExpirationNoticeSetting
 from product.forms import ProductForm, ProductApplicationForm, ProductCommentForm
 from product.mentions import extract_mentions, sync_comment_mentions
@@ -314,6 +316,48 @@ class ProductAppTagModelsTests(TestCase):
     def setUp(self):
         User = get_user_model()
         self.producer = User.objects.create_user(username="tag-producer", password="pw", role="producer")
+    def test_productform_rejects_inactive_tag(self):
+        inactive = TagType.objects.create(tag_name="無効タグ", is_active=False)
+        start = timezone.now().date()
+        data = {
+            "item_name": "x",
+            "number": 1,
+            "description": "d",
+            "start_date": start.isoformat(),
+            "end_date": start.isoformat(),
+            "start_clock": "00:00",
+            "end_clock": "00:00",
+            "tag_input": inactive.tag_name,
+        }
+        form = ProductForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("tag_input", form.errors)
+
+    def test_productform_accepts_active_tag(self):
+        TagType.objects.create(tag_name="有効タグ", is_active=True)
+        start = timezone.now().date()
+        data = {
+            "item_name": "x",
+            "number": 1,
+            "description": "d",
+            "start_date": start.isoformat(),
+            "end_date": start.isoformat(),
+            "start_clock": "00:00",
+            "end_clock": "00:00",
+            "tag_input": "有効タグ",
+        }
+        form = ProductForm(data=data)
+        self.assertTrue(form.is_valid())
+
+    def test_get_expiring_products_respects_settings(self):
+        """
+        # テスト関数名: test_get_expiring_products_respects_settings
+        # 対象URL: なし（モデルメソッドテスト）
+        # テスト観点: 有効期限通知設定の尊重
+        # 入力値: notify_days_before=2 の設定
+        # 期待結果: 通知対象の商品が正しく取得される
+        """
+        notice = ExpirationNoticeSetting.objects.create(is_active=True, notify_days_before=2)
         now = timezone.now()
         self.product = Product.objects.create(
             item_name="Tagged",

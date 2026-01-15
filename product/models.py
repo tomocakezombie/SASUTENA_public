@@ -64,6 +64,9 @@ class ProductApplication(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
     )
+    
+    is_checked_by_producer = models.BooleanField(default=False)
+
 
     class Meta:
         verbose_name = "申込み"
@@ -122,6 +125,7 @@ class TagType(models.Model):
     tag_id = models.BigAutoField(primary_key=True)
     tag_name = models.CharField(max_length=31, unique=True)
     created_t = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         db_table = "product_tagtype"

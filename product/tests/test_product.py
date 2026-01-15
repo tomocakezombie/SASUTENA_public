@@ -75,6 +75,29 @@ class ProductAppTests(TestCase):
         expiring = get_expiring_products()
         self.assertIn(self.expiring, list(expiring))
 
+    def test_product_form_saves_tags(self):
+        tag = TagType.objects.create(tag_name="テストタグ")
+        data = {
+            "item_name": "タグ付き商品",
+            "number": 5,
+            "description": "タグの保存を確認",
+            "start_date": (date.today()).isoformat(),
+            "start_clock": "00:00",
+            "end_date": (date.today()).isoformat(),
+            "end_clock": "23:59",
+            "tag_input": tag.tag_name,
+        }
+        form = ProductForm(data=data)
+        self.assertTrue(form.is_valid())
+        product = form.save(commit=False)
+        product.user = self.user
+        product.save()
+        form.save_m2m()
+        form.save_tags(product)
+
+        saved_tags = list(product.tags.values_list("tag_name", flat=True))
+        self.assertEqual(saved_tags, [tag.tag_name])
+
 
 class ProductIntegrationTests(TestCase):
     def setUp(self):
