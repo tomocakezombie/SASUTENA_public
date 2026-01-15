@@ -15,13 +15,7 @@
             {% if back_url %}
                 <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{{ back_url }}">
             {% else %}
-                {% if request.user.role == "producer" %}
-                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:producer_product_list' %}">
-                {% elif request.user.role == "consumer" %}
-                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:consumer_product_list' %}">
-                {% else %}
-                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:consumer_product_list' %}">
-                {% endif %}
+                <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="javascript:history.back()">
             {% endif %}
                 <span class="ms-1">戻る</span>
             </a>
@@ -77,8 +71,8 @@
                     {% if request.user.is_authenticated and request.user.username != target_user.username %}
                     <div class="d-flex justify-content-center gap-2">
                             {% url 'accounts:evaluate' target_user.username as evaluate_url %}
-                            {% if back_url %}
-                                <a href="{{ evaluate_url }}?next={{ back_url|urlencode }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                            {% if evaluated_back_url %}
+                                <a href="{{ evaluate_url }}?next={{ evaluated_back_url|urlencode }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
                             {% else %}
                                 <a href="{{ evaluate_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
                             {% endif %}

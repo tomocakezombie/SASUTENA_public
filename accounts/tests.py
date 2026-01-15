@@ -39,6 +39,24 @@ class AccountsAppTests(TestCase):
 		resp = self.client.get(url)
 		self.assertEqual(resp.status_code, 403)
 
+	def test_cannot_evaluate_producer(self):
+		self.client.login(username="cons", password="pw")
+		url = reverse("accounts:evaluate", args=[self.producer.username])
+		resp = self.client.get(url)
+		self.assertEqual(resp.status_code, 403)
+
+	def test_cannot_evaluate_admin(self):
+		self.client.login(username="cons", password="pw")
+		url = reverse("accounts:evaluate", args=[self.admin.username])
+		resp = self.client.get(url)
+		self.assertEqual(resp.status_code, 403)
+
+	def test_admin_cannot_evaluate_anyone(self):
+		self.client.login(username="admin", password="pw")
+		url = reverse("accounts:evaluate", args=[self.consumer.username])
+		resp = self.client.get(url)
+		self.assertEqual(resp.status_code, 403)
+
 	def test_nick_name_length_boundaries(self):
 		"""Test nick_name length boundaries for UserProfile."""
 		profile, _ = UserProfile.objects.get_or_create(user=self.producer)

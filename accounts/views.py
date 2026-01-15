@@ -185,6 +185,7 @@ def profile_detail(request, username):
 			"rating_count": evaluation_stats["count"],
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
 			"back_url": back_url,
+			"evaluated_back_url": request.get_full_path(),
 		},
 	)
 
@@ -300,6 +301,12 @@ def evaluate(request, username):
 
 	if target_user == request.user:
 		return HttpResponseForbidden("自分を評価することはできません。")
+
+	if getattr(request.user, "role", "") == "admin":
+		return HttpResponseForbidden("管理者は評価を行えません。")
+
+	if getattr(target_user, "role", "") != "consumer":
+		return HttpResponseForbidden("消費者以外を評価することはできません。")
 
 	requested_next = request.POST.get("next") or request.GET.get("next")
 	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))

@@ -519,6 +519,40 @@ class ProductDetailViewTests(BaseProductViewTestCase):
         self.assertRedirects(response, reverse("product:consumer_product_list"))
 
 
+class ProductApplicationCancelViewTests(BaseProductViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.application = ProductApplication.objects.create(
+            product=self.product,
+            user=self.consumer,
+            quantity=1,
+            message="取り消しテスト",
+        )
+
+    def test_consumer_can_cancel_pending_application(self):
+        """申込み者が保留中の申込みを取り消して一覧に戻れるか確認。"""
+        self.client.login(username="consumer-views", password="pw")
+        response = self.client.post(
+            reverse("product:application_cancel", args=[self.application.pk])
+        )
+        self.assertRedirects(response, reverse("product:product_detail", args=[self.product.pk]))
+        self.assertFalse(ProductApplication.objects.filter(pk=self.application.pk).exists())
+
+    def test_other_user_cannot_cancel_someone_application(self):
+        """他ユーザーが申込みを取り消そうとしても拒否されることを確認。"""
+        other_consumer = get_user_model().objects.create_user(
+            username="other-consumer",
+            password="pw",
+            role="consumer",
+        )
+        self.client.login(username="other-consumer", password="pw")
+        response = self.client.post(
+            reverse("product:application_cancel", args=[self.application.pk])
+        )
+        self.assertRedirects(response, reverse("product:product_detail", args=[self.product.pk]))
+        self.assertTrue(ProductApplication.objects.filter(pk=self.application.pk).exists())
+
+
 class ProductDeleteViewTests(BaseProductViewTestCase):
     def test_producer_can_delete_own_product(self):
         """生産者が自分の商品を削除して一覧に戻るフローを検証。"""

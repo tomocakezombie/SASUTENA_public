@@ -130,7 +130,15 @@
 							{% if is_owner %}
 								<span class="badge bg-secondary-subtle text-secondary py-2 px-3">{{ product.owner_profile.nick_name|default:user.username }}（あなた）の出品です</span>
 							{% elif user_application %}
-								<span class="badge bg-success-subtle text-success py-2 px-3">申込み済み</span>
+								<div class="d-flex gap-2">
+									<span class="badge bg-success-subtle text-success py-2 px-3">申込み済み</span>
+									{% if user_application.apply_status == application_status_pending %}
+										<form method="post" action="{% url 'product:application_cancel' user_application.pk %}" class="d-inline">
+											{% csrf_token %}
+											<button type="submit" class="btn btn-outline-danger btn-sm">申込みを取り消す</button>
+										</form>
+									{% endif %}
+								</div>
 							{% elif show_apply_button %}
 								<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applicationModal">申込み</button>
 							{% endif %}
