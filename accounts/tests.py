@@ -6,7 +6,8 @@ from datetime import timedelta
 
 from .models import UserProfile, UserEvaluation
 from .forms import UserEvaluationForm
-from product.models import Product
+from .views import build_status_rows
+from product.models import Product, ProductApplication
 import json
 
 
@@ -171,6 +172,8 @@ class AccountsAppTests(TestCase):
 		url = reverse("accounts:profile_detail", args=[self.producer.username])
 		response = self.client.get(url)
 		self.assertEqual(response.status_code, 200)
+		self.assertIn("status_rows", response.context)
+		self.assertTrue(response.context["status_rows"])
 
 	def test_profile_detail_other_user_private(self):
 		"""Test profile_detail view for another user's private profile."""
@@ -181,6 +184,7 @@ class AccountsAppTests(TestCase):
 		url = reverse("accounts:profile_detail", args=[self.producer.username])
 		response = self.client.get(url)
 		self.assertEqual(response.status_code, 403)
+		self.assertTemplateUsed(response, "accounts/profile_private.html")
 
 	def test_reverse_update_profile_bio(self):
 		"""Test reverse for update_profile_bio URL."""
@@ -217,6 +221,47 @@ class AccountsAppTests(TestCase):
 		url = reverse("accounts:history")
 		response = self.client.get(url)
 		self.assertIn(response.status_code, [200, 302])
+
+	def test_build_status_rows_includes_completed_for_producer(self):
+		"""生産者ステータスに取引成立出品が含まれることを確認。"""
+		Product.objects.create(
+			item_name="完成済みステータス",
+			number=1,
+			description="desc",
+			start_time=timezone.now(),
+			end_time=timezone.now() + timedelta(days=1),
+			user=self.producer,
+			publish=True,
+			valid=True,
+			completed=True,
+		)
+		rows = build_status_rows(self.producer)
+		completed_row = next((row for row in rows if row["label"] == "取引成立出品"), None)
+		self.assertIsNotNone(completed_row)
+		self.assertEqual(completed_row["value"], 1)
+
+	def test_build_status_rows_includes_completed_for_consumer(self):
+		"""消費者ステータスに取引完了申込みが含まれることを確認。"""
+		product = Product.objects.create(
+			item_name="完了申込み",
+			number=1,
+			description="desc",
+			start_time=timezone.now(),
+			end_time=timezone.now() + timedelta(days=1),
+			user=self.producer,
+			publish=True,
+			valid=True,
+			completed=True,
+		)
+		ProductApplication.objects.create(
+			product=product,
+			user=self.consumer,
+			apply_status=ProductApplication.STATUS_APPROVED,
+		)
+		rows = build_status_rows(self.consumer)
+		completed_row = next((row for row in rows if row["label"] == "取引完了申込み"), None)
+		self.assertIsNotNone(completed_row)
+		self.assertEqual(completed_row["value"], 1)
 
 	def test_producer_history_summary_includes_completed(self):
 		"""Producer history summary exposes completed trade count."""

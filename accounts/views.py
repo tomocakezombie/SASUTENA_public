@@ -61,6 +61,7 @@ def build_status_rows(user):
 		).filter(Q(admin_comment__isnull=True) | Q(admin_comment=""))
 		rows.append({"label": "承認待ち出品", "value": pending_products.count(), "unit": "件"})
 		rows.append({"label": "承認済み出品", "value": products.filter(valid=True).count(), "unit": "件"})
+		rows.append({"label": "取引成立出品", "value": products.filter(completed=True).count(), "unit": "件"})
 		orders_count = ProductApplication.objects.filter(product__user=user).count()
 		rows.append({"label": "受注（申込み）件数", "value": orders_count, "unit": "件"})
 	elif role == "consumer":
@@ -74,6 +75,14 @@ def build_status_rows(user):
 		rows.append({
 			"label": "承認待ち申込み",
 			"value": applications.filter(apply_status=ProductApplication.STATUS_PENDING).count(),
+			"unit": "件",
+		})
+		rows.append({
+			"label": "取引完了申込み",
+			"value": applications.filter(
+				apply_status=ProductApplication.STATUS_APPROVED,
+				product__completed=True,
+			).count(),
 			"unit": "件",
 		})
 	elif role == "admin":
@@ -162,6 +171,9 @@ def profile_detail(request, username):
 		count=Count("id"),
 	)
 
+	target_user_role = getattr(target_user, "role", "")
+	status_rows = build_status_rows(target_user) if target_user_role != "admin" else []
+
 	next_url = request.GET.get("next")
 	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))
 	allowed_hosts.add(request.get_host())
@@ -182,10 +194,18 @@ def profile_detail(request, username):
 			back_url = reverse("product:consumer_product_list")
 
 	if profile and not profile.publish_profile:
-		return HttpResponseForbidden("このプロフィールは非公開です")
+		return render(
+			request,
+			"accounts/profile_private.html",
+			{
+				"target_user": target_user,
+				"profile": profile,
+				"back_url": back_url,
+			},
+			status=403,
+		)
 
 	request_user_role = getattr(request.user, "role", "")
-	target_user_role = getattr(target_user, "role", "")
 	can_evaluate = (
 		request.user.is_authenticated
 		and request.user.username != target_user.username
@@ -205,6 +225,7 @@ def profile_detail(request, username):
 			"back_url": back_url,
 			"evaluated_back_url": request.get_full_path(),
 			"can_evaluate": can_evaluate,
+			"status_rows": status_rows,
 		},
 	)
 

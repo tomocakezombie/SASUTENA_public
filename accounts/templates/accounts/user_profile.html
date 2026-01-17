@@ -111,6 +111,29 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    {% if status_rows %}
+                    <div class="card border-0 bg-body-tertiary mt-4">
+                        <div class="card-body">
+                            <h2 class="h6 text-muted mb-3">ステータス</h2>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0 align-middle">
+                                    <tbody>
+                                        {% for row in status_rows %}
+                                        <tr class="border-top {% if forloop.first %}border-top-0{% endif %}">
+                                            <th scope="row" class="fw-normal text-muted py-3">{{ row.label }}</th>
+                                            <td class="py-3 text-end">
+                                                <span class="fs-5 fw-semibold text-primary">{{ row.value }}</span>
+                                                <span class="ms-1 text-muted">{{ row.unit }}</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
