@@ -578,6 +578,11 @@ class ProductDeleteViewTests(BaseProductViewTestCase):
 class ProductCompleteViewTests(BaseProductViewTestCase):
     def test_product_complete_marks_product_finished(self):
         """完了通知 POST 成功で完了フラグが立ち一覧へ戻るかを検証。"""
+        ProductApplication.objects.create(
+            product=self.product,
+            user=self.consumer,
+            apply_status=ProductApplication.STATUS_APPROVED,
+        )
         self.client.login(username="producer-views", password="pw")
         response = self.client.post(reverse("product:product_complete", args=[self.product.pk]))
         self.assertRedirects(response, reverse("product:producer_product_list"))
@@ -585,8 +590,34 @@ class ProductCompleteViewTests(BaseProductViewTestCase):
         self.assertTrue(self.product.completed)
         self.assertIsNotNone(self.product.completed_notified_at)
 
+    def test_product_complete_allows_pending_application(self):
+        """承認待ち申請が存在するだけで完了通知できることを確認。"""
+        ProductApplication.objects.create(
+            product=self.product,
+            user=self.consumer,
+            apply_status=ProductApplication.STATUS_PENDING,
+        )
+        self.client.login(username="producer-views", password="pw")
+        response = self.client.post(reverse("product:product_complete", args=[self.product.pk]))
+        self.assertRedirects(response, reverse("product:producer_product_list"))
+        self.product.refresh_from_db()
+        self.assertTrue(self.product.completed)
+
+    def test_product_complete_requires_existing_application(self):
+        """申請が1件も無い場合は完了通知できないことを確認。"""
+        self.client.login(username="producer-views", password="pw")
+        response = self.client.post(reverse("product:product_complete", args=[self.product.pk]))
+        self.assertRedirects(response, reverse("product:producer_product_list"))
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.completed)
+
     def test_product_complete_rejects_unapproved_product(self):
         """未承認商品の完了リクエストが却下されることを確認。"""
+        ProductApplication.objects.create(
+            product=self.product,
+            user=self.consumer,
+            apply_status=ProductApplication.STATUS_APPROVED,
+        )
         self.product.valid = False
         self.product.save(update_fields=["valid"])
         self.client.login(username="producer-views", password="pw")

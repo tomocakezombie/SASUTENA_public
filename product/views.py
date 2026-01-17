@@ -235,6 +235,17 @@ def product_complete(request, pk):
         messages.warning(request, "承認済みかつ公開中の商品だけ完了通知できます。")
         return redirect("product:producer_product_list")
 
+    has_active_application = product.applications.filter(
+        apply_status__in=(
+            ProductApplication.STATUS_PENDING,
+            ProductApplication.STATUS_APPROVED,
+        )
+    ).exists()
+
+    if not has_active_application:
+        messages.warning(request, "消費者からの申請がある場合のみ完了通知できます。")
+        return redirect("product:producer_product_list")
+
     product.completed = True
     product.completed_notified_at = timezone.now()
     product.save(update_fields=["completed", "completed_notified_at"])
@@ -387,22 +398,17 @@ def producer_product_list(request):
         is_checked_by_producer=False,
     ).count()
 
-
-
     user = request.user
-    #自分の出品商品一覧
-    my_products = list(Product.objects.filter(user=user).order_by('-created_at'))
-    #全体の出品商品一覧（承認前も含む）
+
+    # 全体の出品商品一覧（承認前も含む）
     all_products = list(Product.objects.all().order_by('-created_at'))
 
-    _attach_owner_profiles(my_products, all_products)
-    
     expiring_products = get_expiring_products()
     _attach_owner_profiles(expiring_products)
     notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
     if notice:
         now = timezone.now()
-            
+
         for product in expiring_products:
             profile = getattr(product, "owner_profile", None)
 
@@ -416,23 +422,35 @@ def producer_product_list(request):
                 .replace("{{user}}", user_display)
                 .replace("{{item}}", product.item_name)
             )
-            
-    my_products = Product.objects.filter(user=user).annotate(
-        pending_application_count=Count(
-            "applications",
-            filter=Q(
-                applications__apply_status=ProductApplication.STATUS_PENDING,
-                applications__is_checked_by_producer=False,
+
+    my_products = list(
+        Product.objects.filter(user=user)
+        .annotate(
+            pending_application_count=Count(
+                "applications",
+                filter=Q(
+                    applications__apply_status=ProductApplication.STATUS_PENDING,
+                    applications__is_checked_by_producer=False,
+                ),
+            ),
+            active_application_count=Count(
+                "applications",
+                filter=Q(
+                    applications__apply_status__in=(
+                        ProductApplication.STATUS_PENDING,
+                        ProductApplication.STATUS_APPROVED,
+                    )
+                ),
             ),
         )
-    ).annotate(
-        has_new_application=Q(pending_application_count__gt=0)
-    ).order_by('-created_at')
+        .order_by('-created_at')
+    )
 
+    for product in my_products:
+        product.has_new_application = product.pending_application_count > 0
 
+    _attach_owner_profiles(my_products, all_products)
 
-
-        
     return render(request, 'product/producer_product_list.html', {
         'my_products': my_products,
         'all_products': all_products,
