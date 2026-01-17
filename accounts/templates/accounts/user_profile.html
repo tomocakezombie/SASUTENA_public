@@ -15,13 +15,7 @@
             {% if back_url %}
                 <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{{ back_url }}">
             {% else %}
-                {% if request.user.role == "producer" %}
-                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:producer_product_list' %}">
-                {% elif request.user.role == "consumer" %}
-                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:consumer_product_list' %}">
-                {% else %}
-                    <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="{% url 'product:consumer_product_list' %}">
-                {% endif %}
+                <a class="btn btn-outline-secondary btn-sm d-flex align-items-center" href="javascript:history.back()">
             {% endif %}
                 <span class="ms-1">戻る</span>
             </a>
@@ -74,17 +68,17 @@
                     {% else %}
                     <p class="small text-muted mb-2">まだ評価はありません。</p>
                     {% endif %}
-                    {% if request.user.is_authenticated and request.user.username != target_user.username %}
+                    {% if can_evaluate %}
                     <div class="d-flex justify-content-center gap-2">
-                            {% url 'accounts:evaluate' target_user.username as evaluate_url %}
-                            {% if back_url %}
-                                <a href="{{ evaluate_url }}?next={{ back_url|urlencode }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
-                            {% else %}
-                                <a href="{{ evaluate_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
-                            {% endif %}
-                                <i class="bi bi-star"></i><span class="ms-1">評価する</span>
-                            </a>
-                        </div>
+                        {% url 'accounts:evaluate' target_user.username as evaluate_url %}
+                        {% if evaluated_back_url %}
+                        <a href="{{ evaluate_url }}?next={{ evaluated_back_url|urlencode }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                        {% else %}
+                        <a href="{{ evaluate_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                        {% endif %}
+                            <i class="bi bi-star"></i><span class="ms-1">評価する</span>
+                        </a>
+                    </div>
                     {% endif %}
                 </div>
 
@@ -117,6 +111,29 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    {% if status_rows %}
+                    <div class="card border-0 bg-body-tertiary mt-4">
+                        <div class="card-body">
+                            <h2 class="h6 text-muted mb-3">ステータス</h2>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0 align-middle">
+                                    <tbody>
+                                        {% for row in status_rows %}
+                                        <tr class="border-top {% if forloop.first %}border-top-0{% endif %}">
+                                            <th scope="row" class="fw-normal text-muted py-3">{{ row.label }}</th>
+                                            <td class="py-3 text-end">
+                                                <span class="fs-5 fw-semibold text-primary">{{ row.value }}</span>
+                                                <span class="ms-1 text-muted">{{ row.unit }}</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

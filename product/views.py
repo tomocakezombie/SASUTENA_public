@@ -6,6 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db.models import Q, OuterRef
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
 
 from accounts.models import UserProfile
 
@@ -65,6 +68,65 @@ def _attach_user_profiles(*iterables):
     for obj in all_objects:
         obj.user_profile = profile_map.get(obj.user_id)
 
+
+def _notify_producer_new_application(application, request):
+    product = application.product
+    producer = product.user
+    producer_email = getattr(producer, "email", "") or ""
+    if not producer_email:
+        return
+
+    producer_profile = getattr(producer, "profile", None)
+    if producer_profile is None:
+        producer_profile = UserProfile.objects.filter(user=producer).first()
+    if producer_profile and producer_profile.mail_allow is False:
+        return
+
+    applicant = application.user
+    applicant_profile = getattr(applicant, "profile", None)
+    if applicant_profile is None:
+        applicant_profile = UserProfile.objects.filter(user=applicant).first()
+
+    if producer_profile and producer_profile.nick_name:
+        producer_display = producer_profile.nick_name
+    elif producer.get_full_name():
+        producer_display = producer.get_full_name()
+    else:
+        producer_display = producer.username
+
+    if applicant_profile and applicant_profile.nick_name:
+        applicant_display = applicant_profile.nick_name
+    elif applicant.get_full_name():
+        applicant_display = applicant.get_full_name()
+    else:
+        applicant_display = applicant.username
+
+    detail_url = request.build_absolute_uri(reverse("product:product_detail", args=[product.pk]))
+
+    subject = f"【Sasutena】{product.item_name}への申込み通知"
+    message_lines = [
+        f"{producer_display} さん",
+        "",
+        f"{applicant_display} さんから商品 \"{product.item_name}\" に申込みが届きました。",
+        f"申込み数: {application.quantity}",
+    ]
+    if application.message:
+        message_lines.extend(["", "申込みメッセージ:", application.message])
+    message_lines.extend([
+        "",
+        f"申込み詳細: {detail_url}",
+        "マイページから申込み内容をご確認ください。",
+        "",
+        f"Sasutena Project {request.get_host()}",
+    ])
+
+    send_mail(
+        subject=subject,
+        message="\n".join(message_lines),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[producer_email],
+        fail_silently=True,
+    )
 
 
 def _redirect_for_role_mismatch(request, allowed_roles, info_message):
@@ -171,6 +233,17 @@ def product_complete(request, pk):
 
     if not (product.valid and product.publish):
         messages.warning(request, "承認済みかつ公開中の商品だけ完了通知できます。")
+        return redirect("product:producer_product_list")
+
+    has_active_application = product.applications.filter(
+        apply_status__in=(
+            ProductApplication.STATUS_PENDING,
+            ProductApplication.STATUS_APPROVED,
+        )
+    ).exists()
+
+    if not has_active_application:
+        messages.warning(request, "消費者からの申請がある場合のみ完了通知できます。")
         return redirect("product:producer_product_list")
 
     product.completed = True
@@ -325,22 +398,17 @@ def producer_product_list(request):
         is_checked_by_producer=False,
     ).count()
 
-
-
     user = request.user
-    #自分の出品商品一覧
-    my_products = list(Product.objects.filter(user=user).order_by('-created_at'))
-    #全体の出品商品一覧（承認前も含む）
+
+    # 全体の出品商品一覧（承認前も含む）
     all_products = list(Product.objects.all().order_by('-created_at'))
 
-    _attach_owner_profiles(my_products, all_products)
-    
     expiring_products = get_expiring_products()
     _attach_owner_profiles(expiring_products)
     notice = ExpirationNoticeSetting.objects.filter(is_active=True).first()
     if notice:
         now = timezone.now()
-            
+
         for product in expiring_products:
             profile = getattr(product, "owner_profile", None)
 
@@ -354,23 +422,35 @@ def producer_product_list(request):
                 .replace("{{user}}", user_display)
                 .replace("{{item}}", product.item_name)
             )
-            
-    my_products = Product.objects.filter(user=user).annotate(
-        pending_application_count=Count(
-            "applications",
-            filter=Q(
-                applications__apply_status=ProductApplication.STATUS_PENDING,
-                applications__is_checked_by_producer=False,
+
+    my_products = list(
+        Product.objects.filter(user=user)
+        .annotate(
+            pending_application_count=Count(
+                "applications",
+                filter=Q(
+                    applications__apply_status=ProductApplication.STATUS_PENDING,
+                    applications__is_checked_by_producer=False,
+                ),
+            ),
+            active_application_count=Count(
+                "applications",
+                filter=Q(
+                    applications__apply_status__in=(
+                        ProductApplication.STATUS_PENDING,
+                        ProductApplication.STATUS_APPROVED,
+                    )
+                ),
             ),
         )
-    ).annotate(
-        has_new_application=Q(pending_application_count__gt=0)
-    ).order_by('-created_at')
+        .order_by('-created_at')
+    )
 
+    for product in my_products:
+        product.has_new_application = product.pending_application_count > 0
 
+    _attach_owner_profiles(my_products, all_products)
 
-
-        
     return render(request, 'product/producer_product_list.html', {
         'my_products': my_products,
         'all_products': all_products,
@@ -456,13 +536,14 @@ def product_detail(request, pk):
 
             application_form = ProductApplicationForm(request.POST)
             if application_form.is_valid():
-                ProductApplication.objects.create(
+                application = ProductApplication.objects.create(
                     product=product,
                     user=request.user,
                     hope_time=application_form.cleaned_data.get('hope_time'),
                     quantity=application_form.cleaned_data.get('quantity') or 1,
                     message=application_form.cleaned_data.get('message', ''),
                 )
+                _notify_producer_new_application(application, request)
                 messages.success(request, '申込みを送信しました。生産者からの連絡をお待ちください。')
                 return redirect('product:product_detail', pk=product.pk)
 
@@ -476,6 +557,7 @@ def product_detail(request, pk):
         'user_application': user_application,
         'comments': comments,
         'comment_form': comment_form,
+        'application_status_pending': ProductApplication.STATUS_PENDING,
     })
 
 
@@ -499,6 +581,25 @@ def product_comment_update(request, comment_id):
         messages.error(request, 'コメントの更新に失敗しました。内容を確認してください。')
 
     return redirect('product:product_detail', pk=comment.product.pk)
+
+
+@login_required
+@require_POST
+def product_application_cancel(request, application_id):
+    application = get_object_or_404(ProductApplication, pk=application_id)
+    product = application.product
+
+    if application.user != request.user:
+        messages.warning(request, '自分の申込みのみ取り消せます。')
+        return redirect('product:product_detail', pk=product.pk)
+
+    if application.apply_status != ProductApplication.STATUS_PENDING:
+        messages.info(request, '処理済みの申込みは取り消せません。')
+        return redirect('product:product_detail', pk=product.pk)
+
+    application.delete()
+    messages.success(request, '申込みを取り消しました。')
+    return redirect('product:product_detail', pk=product.pk)
 
 
 @login_required
