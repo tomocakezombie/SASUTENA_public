@@ -89,6 +89,10 @@
                     <div class="fs-4 fw-bold">{{ summary.approved|default:"0" }}</div>
                     <div class="small">承認済み</div>
                 </div>
+                <div class="col-6 col-md-3 summary-card custom-btn" data-status="completed" style="cursor:pointer;">
+                    <div class="fs-4 fw-bold">{{ summary.completed|default:"0" }}</div>
+                    <div class="small">取引成立</div>
+                </div>
                 <div class="col-6 col-md-3 summary-card custom-btn" data-status="rejected" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.rejected|default:"0" }}</div>
                     <div class="small">却下</div>
@@ -514,6 +518,7 @@
                 const headingMap = {
                     registered: '登録済み商品',
                     approved: '承認済み商品',
+                    completed: '取引成立した商品',
                     rejected: '却下された商品',
                     received: '受注・申込み商品',
                 };

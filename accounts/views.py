@@ -464,6 +464,8 @@ def history(request):
 				statuses.append("rejected")
 			if product.valid:
 				statuses.append("approved")
+			if product.completed:
+				statuses.append("completed")
 			if product.apply_count > 0:
 				statuses.append("received")
 			if product.valid == False and product.admin_comment is None and product.apply_count == 0:
@@ -480,6 +482,7 @@ def history(request):
 			"approved": my_products.filter(valid=True).count(),
 			"rejected": my_products.filter(valid=False, admin_comment__isnull=False).count(),
 			"received": sum(apply_count_dict.values()),
+			"completed": my_products.filter(completed=True).count(),
 		}
 
 		received_list = (

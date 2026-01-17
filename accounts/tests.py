@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from .models import UserProfile, UserEvaluation
 from .forms import UserEvaluationForm
+from product.models import Product
 import json
 
 
@@ -216,6 +217,26 @@ class AccountsAppTests(TestCase):
 		url = reverse("accounts:history")
 		response = self.client.get(url)
 		self.assertIn(response.status_code, [200, 302])
+
+	def test_producer_history_summary_includes_completed(self):
+		"""Producer history summary exposes completed trade count."""
+		self.client.login(username="prod", password="pw")
+		Product.objects.create(
+			item_name="完成済み",
+			number=1,
+			description="desc",
+			start_time=timezone.now(),
+			end_time=timezone.now() + timedelta(days=1),
+			user=self.producer,
+			publish=True,
+			valid=True,
+			completed=True,
+		)
+		response = self.client.get(reverse("accounts:history"))
+		self.assertEqual(response.status_code, 200)
+		summary = response.context.get("summary", {})
+		self.assertIn("completed", summary)
+		self.assertEqual(summary.get("completed"), 1)
 
 	def test_settings_update_profile_success(self):
 		"""Test successful profile update via settings view."""
