@@ -24,6 +24,15 @@ from collections import defaultdict
 User = get_user_model()
 
 
+def _render_evaluation_forbidden(request, reason):
+	return render(
+		request,
+		"accounts/evaluation_forbidden.html",
+		{"reason": reason},
+		status=403,
+	)
+
+
 def _build_star_states(average_score):
 	"""Return per-star fill state for displaying ratings."""
 	if average_score is None:
@@ -175,6 +184,15 @@ def profile_detail(request, username):
 	if profile and not profile.publish_profile:
 		return HttpResponseForbidden("このプロフィールは非公開です")
 
+	request_user_role = getattr(request.user, "role", "")
+	target_user_role = getattr(target_user, "role", "")
+	can_evaluate = (
+		request.user.is_authenticated
+		and request.user.username != target_user.username
+		and request_user_role == "consumer"
+		and target_user_role == "producer"
+	)
+
 	return render(
 		request,
 		"accounts/user_profile.html",
@@ -186,6 +204,7 @@ def profile_detail(request, username):
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
 			"back_url": back_url,
 			"evaluated_back_url": request.get_full_path(),
+			"can_evaluate": can_evaluate,
 		},
 	)
 
@@ -300,13 +319,16 @@ def evaluate(request, username):
 	target_user = get_object_or_404(User, username=username)
 
 	if target_user == request.user:
-		return HttpResponseForbidden("自分を評価することはできません。")
+		return _render_evaluation_forbidden(request, "自分を評価することはできません。")
 
-	if getattr(request.user, "role", "") == "admin":
-		return HttpResponseForbidden("管理者は評価を行えません。")
+	request_user_role = getattr(request.user, "role", "")
+	target_user_role = getattr(target_user, "role", "")
 
-	if getattr(target_user, "role", "") != "consumer":
-		return HttpResponseForbidden("消費者以外を評価することはできません。")
+	if request_user_role != "consumer":
+		return _render_evaluation_forbidden(request, "評価は消費者のみが行えます。")
+
+	if target_user_role != "producer":
+		return _render_evaluation_forbidden(request, "生産者以外は評価対象にできません。")
 
 	requested_next = request.POST.get("next") or request.GET.get("next")
 	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))
@@ -359,13 +381,14 @@ def producer_evaluation_overview(request):
 
 	producer_list = (
 		User.objects.filter(role="producer")
+		.select_related("profile")
 		.annotate(average_score=Avg("evaluations__score"), rating_count=Count("evaluations__id"))
 		.order_by("username")
 	)
 
 	evaluation_history = (
 		UserEvaluation.objects.filter(from_user_id=request.user)
-		.select_related("target_user_id")
+		.select_related("target_user_id", "target_user_id__profile")
 		.order_by("-id")
 	)
 

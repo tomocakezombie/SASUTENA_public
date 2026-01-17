@@ -39,11 +39,12 @@ class AccountsAppTests(TestCase):
 		resp = self.client.get(url)
 		self.assertEqual(resp.status_code, 403)
 
-	def test_cannot_evaluate_producer(self):
+	def test_consumer_can_evaluate_producer(self):
 		self.client.login(username="cons", password="pw")
 		url = reverse("accounts:evaluate", args=[self.producer.username])
 		resp = self.client.get(url)
-		self.assertEqual(resp.status_code, 403)
+		self.assertEqual(resp.status_code, 200)
+		self.assertTemplateUsed(resp, "accounts/evaluate.html")
 
 	def test_cannot_evaluate_admin(self):
 		self.client.login(username="cons", password="pw")
@@ -56,6 +57,18 @@ class AccountsAppTests(TestCase):
 		url = reverse("accounts:evaluate", args=[self.consumer.username])
 		resp = self.client.get(url)
 		self.assertEqual(resp.status_code, 403)
+		url_producer = reverse("accounts:evaluate", args=[self.producer.username])
+		resp_producer = self.client.get(url_producer)
+		self.assertEqual(resp_producer.status_code, 403)
+
+	def test_producer_cannot_evaluate(self):
+		self.client.login(username="prod", password="pw")
+		url = reverse("accounts:evaluate", args=[self.producer.username])
+		resp = self.client.get(url)
+		self.assertEqual(resp.status_code, 403)
+		url_consumer = reverse("accounts:evaluate", args=[self.consumer.username])
+		resp_consumer = self.client.get(url_consumer)
+		self.assertEqual(resp_consumer.status_code, 403)
 
 	def test_nick_name_length_boundaries(self):
 		"""Test nick_name length boundaries for UserProfile."""
