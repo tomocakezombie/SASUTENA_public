@@ -45,6 +45,7 @@
               未設定
             {% endif %}
           </p>
+          {% if user_obj.role != "consumer" %}
           {% if rating_stars %}
           <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
             {% for star in rating_stars %}
@@ -106,6 +107,7 @@
           {% endif %}
           {% else %}
           <p class="small text-muted mb-2">まだ評価はありません。</p>
+          {% endif %}
           {% endif %}
           <div class="d-flex justify-content-center gap-2">
             <button type="button" id="profileEditBtn" class="btn btn-sm btn-outline-primary d-flex align-items-center">
