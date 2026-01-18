@@ -374,6 +374,53 @@
     } else {
       activeThreadButton = null;
     }
+    refreshProfileButton();
+  }
+
+  function buildDmReturnPath(username, itemId) {
+    const rawSearch = window.location.search || '';
+    const params = new URLSearchParams(rawSearch.startsWith('?') ? rawSearch.slice(1) : rawSearch);
+    if (username) {
+      params.set('user', username);
+    } else {
+      params.delete('user');
+    }
+    if (itemId) {
+      params.set('item', itemId);
+    } else {
+      params.delete('item');
+    }
+    const query = params.toString();
+    return window.location.pathname + (query ? '?' + query : '');
+  }
+
+  function refreshProfileButton() {
+    if (!profileButton || !selectedUserButton) {
+      return;
+    }
+    const username = selectedUserButton.dataset.username;
+    if (!username) {
+      profileButton.classList.add('d-none');
+      profileButton.removeAttribute('href');
+      return;
+    }
+    const displayName = selectedUserButton.dataset.displayName || username;
+    const template = profileButton.dataset.profileUrlTemplate || '';
+    if (!template) {
+      profileButton.classList.add('d-none');
+      return;
+    }
+    const itemId = activeThreadButton && activeThreadButton.dataset.itemId
+      ? activeThreadButton.dataset.itemId
+      : '';
+    const nextPath = buildDmReturnPath(username, itemId);
+    let href = template.replace('__USERNAME__', username);
+    if (nextPath) {
+      href += (href.includes('?') ? '&' : '?') + 'next=' + encodeURIComponent(nextPath);
+    }
+    profileButton.href = href;
+    profileButton.textContent = `${displayName} のプロフィール`;
+    profileButton.classList.remove('d-none');
   }
 
   function getThreadGroup(username) {
@@ -767,12 +814,7 @@
     clearConversation(username);
 
 
-    if (profileButton) {
-      const template = profileButton.dataset.profileUrlTemplate;
-      profileButton.href = template.replace('__USERNAME__', username);
-      profileButton.textContent = `${displayName} のプロフィール`;
-      profileButton.classList.remove('d-none');
-    }
+    refreshProfileButton();
 
 
     if (threadUrl) {
@@ -897,12 +939,8 @@
     if (initialButton) {
       selectUser(initialButton, {autoThreadUrl: initialUrl});
     }
-  } else if (initialUrl && userList) {
-    const firstButton = userList.querySelector('.conversation-user');
-    if (firstButton) {
-      selectUser(firstButton, {autoThreadUrl: initialUrl});
-    }
   }
+  // 初期状態では自動選択を行わず、ユーザーに選択を促すメッセージを表示
 })();
 </script>
 {% endblock %}

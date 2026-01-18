@@ -223,7 +223,7 @@ class AccountsAppTests(TestCase):
 		self.assertIn(response.status_code, [200, 302])
 
 	def test_build_status_rows_includes_completed_for_producer(self):
-		"""生産者ステータスに取引成立出品が含まれることを確認。"""
+		"""生産者ステータスに取引完了出品が含まれることを確認。"""
 		Product.objects.create(
 			item_name="完成済みステータス",
 			number=1,
@@ -236,12 +236,12 @@ class AccountsAppTests(TestCase):
 			completed=True,
 		)
 		rows = build_status_rows(self.producer)
-		completed_row = next((row for row in rows if row["label"] == "取引成立出品"), None)
+		completed_row = next((row for row in rows if row["label"] == "取引完了"), None)
 		self.assertIsNotNone(completed_row)
 		self.assertEqual(completed_row["value"], 1)
 
 	def test_build_status_rows_includes_completed_for_consumer(self):
-		"""消費者ステータスに取引完了申込みが含まれることを確認。"""
+		"""消費者ステータスに取引完了が含まれることを確認。"""
 		product = Product.objects.create(
 			item_name="完了申込み",
 			number=1,
@@ -259,7 +259,7 @@ class AccountsAppTests(TestCase):
 			apply_status=ProductApplication.STATUS_APPROVED,
 		)
 		rows = build_status_rows(self.consumer)
-		completed_row = next((row for row in rows if row["label"] == "取引完了申込み"), None)
+		completed_row = next((row for row in rows if row["label"] == "取引完了"), None)
 		self.assertIsNotNone(completed_row)
 		self.assertEqual(completed_row["value"], 1)
 

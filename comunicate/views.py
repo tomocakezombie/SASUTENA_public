@@ -270,16 +270,12 @@ def conversation_list(request):
             )
 
     initial_conversation_url = requested_thread_url or ""
-    if not initial_conversation_url and user_entries:
-        first_threads = user_entries[0]["threads"]
-        if first_threads:
-            initial_conversation_url = first_threads[0]["thread_url"]
 
     context = {
         "all_users": all_users,
         "user_entries": user_entries,
         "initial_conversation_url": initial_conversation_url,
-        "initial_username": requested_username or (user_entries[0]["counterpart"].username if user_entries else ""),
+        "initial_username": requested_username or "",
     }
     return render(request, "comunicate/conversation_list.html", context)
 
