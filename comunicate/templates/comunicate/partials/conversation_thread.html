@@ -123,7 +123,12 @@
               <li>
                 <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editMessageModal-{{ message.pk }}">メッセージを編集</button>
               </li>
-              <li><a class="dropdown-item text-danger" href="{% url 'comunicate:message_delete' message.pk %}">メッセージを削除</a></li>
+              <li>
+                <form method="post" action="{% url 'comunicate:message_delete' message.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="dropdown-item text-danger">メッセージを削除</button>
+                </form>
+              </li>
             </ul>
           </div>
           {% endif %}

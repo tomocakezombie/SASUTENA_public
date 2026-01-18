@@ -33,6 +33,13 @@ def _render_evaluation_forbidden(request, reason):
 	)
 
 
+def accounts_root(request):
+	"""Redirect /accounts/ to login or the user's dashboard."""
+	if not request.user.is_authenticated:
+		return redirect("login:login")
+	return redirect("accounts:my_page")
+
+
 def _build_star_states(average_score):
 	"""Return per-star fill state for displaying ratings."""
 	if average_score is None:
@@ -300,8 +307,8 @@ def settings(request):
 		},
 	)
 
-@require_POST
 @login_required
+@require_POST
 def update_profile_bio(request):
 	"""Persist profile bio updates triggered from the profile page."""
 	profile, _created = UserProfile.objects.get_or_create(
