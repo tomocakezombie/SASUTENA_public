@@ -42,6 +42,12 @@
     <div class="card shadow-sm border-0">
       <div class="card-body">
 
+                <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:my_page' %}">
+                        &larr; マイページに戻る
+                    </a>
+                </div>
+
         <!-- タイトル -->
         <div class="text-center mb-4">
           <i class="bi bi-clock-history text-warning" style="font-size:48px;"></i>
@@ -83,6 +89,10 @@
                     <div class="fs-4 fw-bold">{{ summary.approved|default:"0" }}</div>
                     <div class="small">承認済み</div>
                 </div>
+                <div class="col-6 col-md-3 summary-card custom-btn" data-status="completed" style="cursor:pointer;">
+                    <div class="fs-4 fw-bold">{{ summary.completed|default:"0" }}</div>
+                    <div class="small">取引成立</div>
+                </div>
                 <div class="col-6 col-md-3 summary-card custom-btn" data-status="rejected" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.rejected|default:"0" }}</div>
                     <div class="small">却下</div>
@@ -114,8 +124,11 @@
             <h2 id="consumer-list-heading" class="h6 text-center mb-3">取引成立した商品</h2>
 
             <!-- 検索・ソート -->
-            <div class="d-flex flex-wrap gap-2 mb-3 justify-content-between">
-                <input type="text" id="consumer-search-input" class="form-control" placeholder="商品名で検索" style="max-width: 300px;">
+            <div class="d-flex flex-wrap gap-2 mb-3 justify-content-between align-items-center">
+                <div class="input-group input-group-sm" style="max-width: 360px;">
+                    <input type="text" id="consumer-search-input" class="form-control" placeholder="商品名で検索">
+                    <button type="button" class="btn btn-outline-primary" id="consumer-search-button">検索</button>
+                </div>
                 <button class="btn btn-outline-secondary btn-sm"
                         id="consumer-sort-button">
                     ソート: 申込日時が古い順
@@ -289,6 +302,7 @@
             const cards = document.querySelectorAll('.summary-card');
             const consumerItems = document.querySelectorAll('#consumer-history-list article');
             const searchInput = document.getElementById('consumer-search-input');
+            const searchButton = document.getElementById('consumer-search-button');
             const heading = document.querySelector('#consumer-list-heading');
 
             let currentStatus = 'completed';
@@ -326,7 +340,15 @@
                 });
             });
 
-            searchInput.addEventListener('input', applyFilters);
+            searchInput.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    applyFilters();
+                }
+            });
+            if (searchButton) {
+                searchButton.addEventListener('click', applyFilters);
+            }
 
             const sortButton = document.getElementById('consumer-sort-button');
             const historyList = document.getElementById('consumer-history-list');
@@ -360,11 +382,12 @@
 
 
         <!-- 検索・ソート -->
-        <div class="d-flex flex-wrap gap-2 mb-3 justify-content-between">
-            <input type="text" id="search-input" class="form-control" placeholder="商品名で検索" style="max-width: 300px;">
-            <div class="d-flex gap-2 mb-3">
-                <button class="btn btn-outline-secondary btn-sm" id="sort-button">ソート: 受け渡し開始日順</button>
+        <div class="d-flex flex-wrap gap-2 mb-3 justify-content-between align-items-center">
+            <div class="input-group input-group-sm" style="max-width: 360px;">
+                <input type="text" id="search-input" class="form-control" placeholder="商品名で検索">
+                <button type="button" class="btn btn-outline-primary" id="producer-search-button">検索</button>
             </div>
+            <button class="btn btn-outline-secondary btn-sm" id="sort-button">ソート: 受け渡し開始日順</button>
         </div>
 
         <div class="card border-0 shadow-sm">
@@ -455,6 +478,7 @@
             const producerItems = document.querySelectorAll('#producer-history-list article');
             const heading = document.getElementById('producer-list-heading');
             const searchInput = document.getElementById('search-input');
+            const searchButton = document.getElementById('producer-search-button');
             const historyList = document.getElementById('producer-history-list');
             const sortButton = document.getElementById('sort-button');
 
@@ -494,6 +518,7 @@
                 const headingMap = {
                     registered: '登録済み商品',
                     approved: '承認済み商品',
+                    completed: '取引成立した商品',
                     rejected: '却下された商品',
                     received: '受注・申込み商品',
                 };
@@ -518,7 +543,15 @@
             /* =========================
             検索
             ========================= */
-            searchInput.addEventListener('input', applyFilters);
+            searchInput.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    applyFilters();
+                }
+            });
+            if (searchButton) {
+                searchButton.addEventListener('click', applyFilters);
+            }
 
             /* =========================
             ソート

@@ -18,9 +18,19 @@ from .models import UserEvaluation, UserProfile
 
 from login.models import AccountRequest
 from product.models import ProductApplication, Product
+from collections import defaultdict
 
 
 User = get_user_model()
+
+
+def _render_evaluation_forbidden(request, reason):
+	return render(
+		request,
+		"accounts/evaluation_forbidden.html",
+		{"reason": reason},
+		status=403,
+	)
 
 
 def _build_star_states(average_score):
@@ -51,6 +61,7 @@ def build_status_rows(user):
 		).filter(Q(admin_comment__isnull=True) | Q(admin_comment=""))
 		rows.append({"label": "承認待ち出品", "value": pending_products.count(), "unit": "件"})
 		rows.append({"label": "承認済み出品", "value": products.filter(valid=True).count(), "unit": "件"})
+		rows.append({"label": "取引成立出品", "value": products.filter(completed=True).count(), "unit": "件"})
 		orders_count = ProductApplication.objects.filter(product__user=user).count()
 		rows.append({"label": "受注（申込み）件数", "value": orders_count, "unit": "件"})
 	elif role == "consumer":
@@ -64,6 +75,14 @@ def build_status_rows(user):
 		rows.append({
 			"label": "承認待ち申込み",
 			"value": applications.filter(apply_status=ProductApplication.STATUS_PENDING).count(),
+			"unit": "件",
+		})
+		rows.append({
+			"label": "取引完了申込み",
+			"value": applications.filter(
+				apply_status=ProductApplication.STATUS_APPROVED,
+				product__completed=True,
+			).count(),
 			"unit": "件",
 		})
 	elif role == "admin":
@@ -83,7 +102,7 @@ def build_status_rows(user):
 @login_required
 def my_page(request):
 	"""Display the logged-in user's own profile page."""
-	profile, _created = UserProfile.objects.get_or_create(  # safeguard in case profile is missing
+	profile, _ = UserProfile.objects.get_or_create(  # safeguard in case profile is missing
 		user=request.user,
 		defaults={
 			"nick_name": request.user.username,
@@ -91,10 +110,35 @@ def my_page(request):
 			"mail_allow": True,
 		},
 	)
+
 	evaluation_stats = UserEvaluation.objects.filter(target_user_id=request.user).aggregate(
 		avg=Avg("score"),
 		count=Count("id"),
 	)
+	evaluations = UserEvaluation.objects.filter(
+		target_user_id=request.user
+	).select_related("from_user_id__profile").order_by("created_at")  
+
+ 
+	user_comments = defaultdict(list)
+	latest_times = {}
+	last_scores = {}
+
+	for e in evaluations:
+		user_comments[e.from_user_id].append(e)
+		latest_times[e.from_user_id] = e.created_at
+		last_scores[e.from_user_id] = e.score
+
+    # ユーザーごとのリストに変換
+	received_evaluations_by_user = []
+	for user, entries in user_comments.items():
+		received_evaluations_by_user.append({
+            "user": user,
+            "entries": entries,
+            "latest": latest_times[user],
+            "last_score": last_scores[user],
+        })
+
 
 	if getattr(request.user, "role", "") == "admin":
 		return redirect("adminPortal:my_page")
@@ -108,6 +152,7 @@ def my_page(request):
 			"rating_average": evaluation_stats["avg"],
 			"rating_count": evaluation_stats["count"],
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
+   			"received_evaluations_by_user": received_evaluations_by_user,
 			"status_rows": build_status_rows(request.user),
 		},
 	)
@@ -125,6 +170,9 @@ def profile_detail(request, username):
 		avg=Avg("score"),
 		count=Count("id"),
 	)
+
+	target_user_role = getattr(target_user, "role", "")
+	status_rows = build_status_rows(target_user) if target_user_role != "admin" else []
 
 	next_url = request.GET.get("next")
 	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))
@@ -146,7 +194,24 @@ def profile_detail(request, username):
 			back_url = reverse("product:consumer_product_list")
 
 	if profile and not profile.publish_profile:
-		return HttpResponseForbidden("このプロフィールは非公開です")
+		return render(
+			request,
+			"accounts/profile_private.html",
+			{
+				"target_user": target_user,
+				"profile": profile,
+				"back_url": back_url,
+			},
+			status=403,
+		)
+
+	request_user_role = getattr(request.user, "role", "")
+	can_evaluate = (
+		request.user.is_authenticated
+		and request.user.username != target_user.username
+		and request_user_role == "consumer"
+		and target_user_role == "producer"
+	)
 
 	return render(
 		request,
@@ -158,6 +223,9 @@ def profile_detail(request, username):
 			"rating_count": evaluation_stats["count"],
 			"rating_stars": _build_star_states(evaluation_stats["avg"]),
 			"back_url": back_url,
+			"evaluated_back_url": request.get_full_path(),
+			"can_evaluate": can_evaluate,
+			"status_rows": status_rows,
 		},
 	)
 
@@ -199,6 +267,10 @@ def settings(request):
 				updated_profile.icon_image = None
 			if not updated_profile.nick_name:
 				updated_profile.nick_name = request.user.username
+
+			# 管理用メモの保存
+			updated_profile.memo = profile_form.cleaned_data.get("memo", "")
+
 			updated_profile.save()
 			profile_form.save_m2m()
 
@@ -212,6 +284,9 @@ def settings(request):
 			update_session_auth_hash(request, user)
 			messages.success(request, "パスワードを更新しました。")
 			return redirect("accounts:settings")
+		elif form_type == "password":
+			# フォームエラーをターミナルに出力
+			print("PasswordChangeForm errors:", password_form.errors)
 		if form_type not in {"profile", "password"}:
 			messages.error(request, "送信内容を処理できませんでした。改めてお試しください。")
 
@@ -265,7 +340,16 @@ def evaluate(request, username):
 	target_user = get_object_or_404(User, username=username)
 
 	if target_user == request.user:
-		return HttpResponseForbidden("自分を評価することはできません。")
+		return _render_evaluation_forbidden(request, "自分を評価することはできません。")
+
+	request_user_role = getattr(request.user, "role", "")
+	target_user_role = getattr(target_user, "role", "")
+
+	if request_user_role != "consumer":
+		return _render_evaluation_forbidden(request, "評価は消費者のみが行えます。")
+
+	if target_user_role != "producer":
+		return _render_evaluation_forbidden(request, "生産者以外は評価対象にできません。")
 
 	requested_next = request.POST.get("next") or request.GET.get("next")
 	allowed_hosts = set(getattr(settings, "ALLOWED_HOSTS", []))
@@ -318,13 +402,14 @@ def producer_evaluation_overview(request):
 
 	producer_list = (
 		User.objects.filter(role="producer")
+		.select_related("profile")
 		.annotate(average_score=Avg("evaluations__score"), rating_count=Count("evaluations__id"))
 		.order_by("username")
 	)
 
 	evaluation_history = (
 		UserEvaluation.objects.filter(from_user_id=request.user)
-		.select_related("target_user_id")
+		.select_related("target_user_id", "target_user_id__profile")
 		.order_by("-id")
 	)
 
@@ -400,6 +485,8 @@ def history(request):
 				statuses.append("rejected")
 			if product.valid:
 				statuses.append("approved")
+			if product.completed:
+				statuses.append("completed")
 			if product.apply_count > 0:
 				statuses.append("received")
 			if product.valid == False and product.admin_comment is None and product.apply_count == 0:
@@ -416,6 +503,7 @@ def history(request):
 			"approved": my_products.filter(valid=True).count(),
 			"rejected": my_products.filter(valid=False, admin_comment__isnull=False).count(),
 			"received": sum(apply_count_dict.values()),
+			"completed": my_products.filter(completed=True).count(),
 		}
 
 		received_list = (

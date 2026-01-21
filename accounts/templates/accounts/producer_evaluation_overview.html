@@ -34,7 +34,29 @@
 						{% if producer_list %}
 							{% for producer in producer_list %}
 							<tr>
-								<td class="fw-semibold">{{ producer.username }}</td>
+								<td>
+									<a href="{% url 'accounts:profile_detail' producer.username %}"
+									   class="d-inline-flex align-items-center gap-2 text-decoration-none text-reset">
+										{% if producer.profile.icon_image %}
+										<img src="{{ producer.profile.icon_image.url }}"
+											alt="{{ producer.username }} さんのアイコン"
+											class="rounded-circle border"
+											style="width:40px; height:40px; object-fit:cover;">
+										{% else %}
+										<span class="d-inline-flex align-items-center justify-content-center"
+										      style="width:40px; height:40px;">
+											<i class="bi bi-person-circle fs-4 text-secondary"></i>
+										</span>
+										{% endif %}
+										<span class="fw-semibold">
+											{% if producer.profile.nick_name %}
+												{{ producer.profile.nick_name }}
+											{% else %}
+												{{ producer.username }}
+											{% endif %}
+										</span>
+									</a>
+								</td>
 								<td class="text-muted">
 									{% if producer.average_score %}
 										{{ producer.average_score|floatformat:1 }} / 5.0
@@ -75,7 +97,29 @@
 						{% if evaluation_history %}
 							{% for entry in evaluation_history %}
 							<tr>
-								<td class="fw-semibold">{{ entry.target_user_id.username }}</td>
+								<td>
+									<a href="{% url 'accounts:profile_detail' entry.target_user_id.username %}"
+									   class="d-inline-flex align-items-center gap-2 text-decoration-none text-reset">
+										{% if entry.target_user_id.profile.icon_image %}
+										<img src="{{ entry.target_user_id.profile.icon_image.url }}"
+											alt="{{ entry.target_user_id.username }} さんのアイコン"
+											class="rounded-circle border"
+											style="width:32px; height:32px; object-fit:cover;">
+										{% else %}
+										<span class="d-inline-flex align-items-center justify-content-center"
+										      style="width:32px; height:32px;">
+											<i class="bi bi-person-circle fs-4 text-secondary"></i>
+										</span>
+										{% endif %}
+										<span class="fw-semibold">
+											{% if entry.target_user_id.profile.nick_name %}
+												{{ entry.target_user_id.profile.nick_name }}
+											{% else %}
+												{{ entry.target_user_id.username }}
+											{% endif %}
+										</span>
+									</a>
+								</td>
 								<td>{{ entry.score|floatformat:1 }} / 5.0</td>
 								<td class="text-muted small">{{ entry.comment|default:"(コメントなし)" }}</td>
 							</tr>

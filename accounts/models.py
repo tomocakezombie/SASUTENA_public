@@ -37,6 +37,7 @@ class UserEvaluation(models.Model):
     )
     score = models.IntegerField()
     comment = models.TextField(blank=True, null=True, verbose_name="コメント")
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Evaluation {self.id} - {self.target_user_id.username} by {self.from_user_id.username}"

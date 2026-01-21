@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, time
 
 from django import forms
@@ -8,11 +9,10 @@ from .models import Product, ProductApplication, ProductComment, TagType
 
 
 class ProductForm(forms.ModelForm):
-    tags = forms.ModelMultipleChoiceField(
+    tag_input = forms.CharField(
         label="タグ",
-        queryset=TagType.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": 6}),
+        widget=forms.HiddenInput(attrs={"data-tag-storage": "1"}),
     )
     start_date = forms.DateField(
         label="受け渡し開始日",
@@ -37,7 +37,7 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ["item_name", "number", "description", "item_image", "tags", "show_expiration_notice"]
+        fields = ["item_name", "number", "description", "item_image", "show_expiration_notice"]
         widgets = {
             "show_expiration_notice": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
@@ -47,9 +47,20 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["tags"].queryset = TagType.objects.order_by("tag_name")
-        if self.instance.pk:
-            self.fields["tags"].initial = self.instance.tags.values_list("pk", flat=True)
+        self._tag_objects = []
+        active_tags = TagType.objects.filter(is_active=True).order_by("tag_name")
+        self.tag_suggestions = list(active_tags.values_list("tag_name", flat=True))
+        self.tag_datalist_id = "tag-suggestions"
+
+        if not self.is_bound:
+            instance_tags = []
+            if self.instance.pk:
+                instance_tags = list(
+                    self.instance.tags.filter(is_active=True).order_by("tag_name").values_list("tag_name", flat=True)
+                )
+            initial_value = self.initial.get("tag_input") or self.fields["tag_input"].initial
+            if not initial_value and instance_tags:
+                self.fields["tag_input"].initial = " ".join(instance_tags)
 
         text_inputs = [
             ("item_name", {"placeholder": "例：朝採れトマト10個入り"}),
@@ -72,8 +83,6 @@ class ProductForm(forms.ModelForm):
         self.fields["end_clock"].widget.attrs.update(time_attrs.copy())
 
         self.fields["item_image"].widget.attrs.update({"class": "form-control"})
-        if not self.fields["tags"].queryset.exists():
-            self.fields["tags"].widget.attrs["size"] = 1
 
         start_dt = getattr(self.instance, "start_time", None)
         if start_dt:
@@ -123,16 +132,87 @@ class ProductForm(forms.ModelForm):
         cleaned_data["end_clock"] = end_time_only
         cleaned_data["start_time"] = start_dt
         cleaned_data["end_time"] = end_dt
+        cleaned_data["tag_objects"] = self._resolve_tag_objects(cleaned_data.get("tag_input"))
         return cleaned_data
 
     def save(self, commit=True):
         product = super().save(commit=False)
         product.start_time = self.cleaned_data.get("start_time")
         product.end_time = self.cleaned_data.get("end_time")
+        self._tag_objects = self.cleaned_data.get("tag_objects", [])
         if commit:
             product.save()
-            self.save_m2m()
+            self._save_tags()
+        else:
+            self.instance = product
         return product
+
+    def save_tags(self, product=None):
+        target = product or self.instance
+        if target is not None and target is not self.instance:
+            self.instance = target
+        self._save_tags()
+
+    def _save_tags(self):
+        if not getattr(self.instance, "pk", None):
+            return
+        if self._tag_objects is None:
+            return
+        self.instance.tags.set(self._tag_objects)
+
+    @staticmethod
+    def _normalize_token(token):
+        token = (token or "").strip()
+        if token.startswith("#"):
+            token = token[1:]
+        return token
+
+    @classmethod
+    def _parse_tokens(cls, raw_text):
+        tokens = []
+        for piece in re.split(r"[\s,]+", raw_text or ""):
+            normalized = cls._normalize_token(piece)
+            if normalized and normalized not in tokens:
+                tokens.append(normalized)
+        return tokens
+
+    def _resolve_tag_objects(self, raw_text):
+        tokens = self._parse_tokens(raw_text)
+        tag_objects = []
+        missing_tokens = []
+        inactive_tokens = []
+        for token in tokens:
+            tag = TagType.objects.filter(tag_name__iexact=token, is_active=True).first()
+            if tag:
+                if tag not in tag_objects:
+                    tag_objects.append(tag)
+            else:
+                if TagType.objects.filter(tag_name__iexact=token, is_active=False).exists():
+                    inactive_tokens.append(token)
+                else:
+                    missing_tokens.append(token)
+        if inactive_tokens:
+            self.add_error(
+                "tag_input",
+                "無効化されたタグがあります: " + ", ".join(inactive_tokens),
+            )
+        if missing_tokens:
+            self.add_error(
+                "tag_input",
+                "存在しないタグがあります: " + ", ".join(missing_tokens),
+            )
+        return tag_objects
+
+    def get_selected_tag_tokens(self):
+        if self.is_bound:
+            raw_value = self.data.get(self.add_prefix("tag_input"), "")
+        else:
+            raw_value = (
+                self.initial.get("tag_input")
+                or self.fields["tag_input"].initial
+                or ""
+            )
+        return self._parse_tokens(raw_value)
 
 
 class ProductApplicationForm(forms.ModelForm):

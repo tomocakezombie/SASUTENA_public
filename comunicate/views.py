@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from .forms import MessageEditForm, MessageForm
 from .models import Message
@@ -371,21 +372,21 @@ def _conversation_redirect(message, current_user):
 
 
 @login_required
+@require_POST
 def message_edit(request, pk):
     message = get_object_or_404(Message, pk=pk, delete_flag=False)
     if message.send_user != request.user:
-        return redirect("comunicate:conversation_list")
+        django_messages.warning(request, "自分が送信したメッセージのみ編集できます。")
+        return redirect(_conversation_redirect(message, request.user))
 
-    if request.method == "POST":
-        form = MessageEditForm(request.POST, instance=message)
-        if form.is_valid():
-            message.record_edit(form.cleaned_data["message_content"])
-            django_messages.success(request, "メッセージを更新しました。")
-            return redirect(_conversation_redirect(message, request.user))
+    form = MessageEditForm(request.POST, instance=message)
+    if form.is_valid():
+        message.record_edit(form.cleaned_data["message_content"])
+        django_messages.success(request, "メッセージを編集しました。")
     else:
-        form = MessageEditForm(instance=message)
+        django_messages.error(request, "メッセージの編集に失敗しました。内容を確認してください。")
 
-    return render(request, "comunicate/message_edit.html", {"form": form, "message": message})
+    return redirect(_conversation_redirect(message, request.user))
 
 
 @login_required

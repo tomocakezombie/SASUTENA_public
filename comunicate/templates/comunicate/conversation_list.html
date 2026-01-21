@@ -22,6 +22,7 @@
         <div class="input-group mb-2">
           <span class="input-group-text">検索</span>
           <input type="search" class="form-control" id="userSearchInput" placeholder="ユーザー名で検索" autocomplete="off">
+          <button type="button" class="btn btn-outline-primary" id="userSearchButton">検索</button>
           <button type="button" class="btn btn-outline-secondary" id="userSearchClear">クリア</button>
         </div>
 
@@ -181,10 +182,29 @@
   const subtitleEl = document.getElementById('conversationSubtitle');
   const profileButton = document.getElementById('profileButton');
   const userSearchInput = document.getElementById('userSearchInput');
+  const userSearchButton = document.getElementById('userSearchButton');
   const userSearchClear = document.getElementById('userSearchClear');
   let currentUrl = '';
   let selectedUserButton = null;
   let activeThreadButton = null;
+
+  function executeScripts(fragment) {
+    if (!fragment) {
+      return;
+    }
+    const scripts = fragment.querySelectorAll('script');
+    scripts.forEach(original => {
+      const script = document.createElement('script');
+      if (original.src) {
+        script.src = original.src;
+        script.async = false;
+      } else {
+        script.textContent = original.textContent;
+      }
+      document.body.appendChild(script);
+      document.body.removeChild(script);
+    });
+  }
 
   function updateSearchState(input) {
     if (!input) {
@@ -657,6 +677,8 @@
       formWrapper.hidden = true;
     }
 
+    executeScripts(temp);
+
     const counterpart = thread.dataset.counterpart || '';
     const itemName = thread.dataset.itemName && thread.dataset.itemName.trim()
       ? thread.dataset.itemName.trim()
@@ -736,6 +758,9 @@
   }
 
   function filterUsers() {
+    if (!userSearchInput || !userList) {
+      return;
+    }
     const term = userSearchInput.value.trim().toLowerCase();
     const users = userList.querySelectorAll('.conversation-user');
     users.forEach(user => {
@@ -751,10 +776,21 @@
   }
 
   if (userSearchInput) {
-    userSearchInput.addEventListener('input', filterUsers);
+    userSearchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        filterUsers();
+      }
+    });
+  }
+  if (userSearchButton) {
+    userSearchButton.addEventListener('click', filterUsers);
   }
   if (userSearchClear) {
     userSearchClear.addEventListener('click', () => {
+      if (!userSearchInput) {
+        return;
+      }
       userSearchInput.value = '';
       filterUsers();
       userSearchInput.focus();

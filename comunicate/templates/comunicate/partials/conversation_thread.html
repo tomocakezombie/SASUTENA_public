@@ -113,14 +113,16 @@
       </div>
       <div class="message-bubble self">
         <div class="d-flex justify-content-between align-items-start gap-2">
-          <div class="message-author">あなた</div>
+          <!-- <div class="message-author">あなた</div> -->
           {% if not message.delete_flag %}
           <div class="dropdown">
             <button type="button" class="btn btn-sm btn-outline-light text-white border-0 p-1 d-flex align-items-center message-menu" data-bs-toggle="dropdown" aria-expanded="false" title="メッセージ操作">
               <i class="bi bi-three-dots-vertical"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="{% url 'comunicate:message_edit' message.pk %}">メッセージを編集</a></li>
+              <li>
+                <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editMessageModal-{{ message.pk }}">メッセージを編集</button>
+              </li>
               <li><a class="dropdown-item text-danger" href="{% url 'comunicate:message_delete' message.pk %}">メッセージを削除</a></li>
             </ul>
           </div>
@@ -136,6 +138,33 @@
         {% endif %}
       </a>
     </div>
+    <div class="modal fade message-edit-modal" id="editMessageModal-{{ message.pk }}" tabindex="-1" aria-labelledby="editMessageModalLabel-{{ message.pk }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content border-0 shadow">
+          <form method="post" action="{% url 'comunicate:message_edit' message.pk %}">
+            {% csrf_token %}
+            <div class="modal-body pb-2">
+              <p class="fw-semibold mb-3" id="editMessageModalLabel-{{ message.pk }}">メッセージを編集</p>
+              <textarea
+                id="editMessageContent-{{ message.pk }}"
+                name="message_content"
+                class="form-control"
+                rows="6"
+                maxlength="511"
+                required
+                data-edit-textarea="true"
+                data-original="{{ message.message_content|escape }}"
+              >{{ message.message_content|escape }}</textarea>
+              <div class="text-danger small mt-2 d-none" data-edit-error>メッセージが変更されていません。</div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+              <button type="submit" class="btn btn-primary" data-edit-submit="true">OK</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
     {% else %}
     <div class="message-row other">
       <a class="message-avatar other" href="{% url 'accounts:profile_detail' message.send_user.username %}" title="{{ message.send_user.username }} さんのプロフィール">
@@ -146,9 +175,9 @@
         {% endif %}
       </a>
       <div class="message-bubble other">
-        <div class="message-author">
+        <!-- <div class="message-author">
           {{ message.send_user.username }}
-        </div>
+        </div> -->
         <div class="message-body">{{ message.message_content|linebreaksbr }}</div>
         <div class="message-flags">
           {% if message.edit_flag %}<span class="badge rounded-pill text-bg-secondary">編集済み</span>{% endif %}
@@ -182,3 +211,70 @@
     {% endif %}
   </form>
 </div>
+
+<script>
+(function () {
+  function normalize(value) {
+    return (value || "").replace(/^\s+|\s+$/g, "");
+  }
+
+  function setupModal(modal) {
+    if (!modal || modal.dataset.editModalReady === "1") {
+      return;
+    }
+    var textarea = modal.querySelector("[data-edit-textarea]");
+    var submit = modal.querySelector("[data-edit-submit]");
+    var error = modal.querySelector("[data-edit-error]");
+    if (!textarea || !submit) {
+      return;
+    }
+
+    function originalValue() {
+      return normalize(textarea.getAttribute("data-original"));
+    }
+
+    function updateState() {
+      var changed = normalize(textarea.value) !== originalValue();
+      submit.disabled = !changed;
+      if (error) {
+        error.classList.toggle("d-none", changed);
+      }
+    }
+
+    textarea.addEventListener("input", updateState);
+
+    modal.addEventListener("shown.bs.modal", function () {
+      updateState();
+      textarea.focus();
+    });
+
+    modal.addEventListener("hidden.bs.modal", function () {
+      textarea.value = textarea.getAttribute("data-original") || "";
+      updateState();
+    });
+
+    updateState();
+    modal.dataset.editModalReady = "1";
+  }
+
+  function initializeModals() {
+    document.querySelectorAll(".message-edit-modal").forEach(setupModal);
+  }
+
+  if (window.__messageEditModalInit) {
+    initializeModals();
+    return;
+  }
+
+  window.__messageEditModalInit = true;
+
+  document.addEventListener("DOMContentLoaded", initializeModals);
+  document.addEventListener("shown.bs.modal", function (event) {
+    if (event.target && event.target.classList && event.target.classList.contains("message-edit-modal")) {
+      setupModal(event.target);
+    }
+  });
+
+  initializeModals();
+})();
+</script>
