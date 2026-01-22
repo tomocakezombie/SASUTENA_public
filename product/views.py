@@ -195,6 +195,7 @@ def product_list(request):
     return redirect('product:producer_product_list')
 
 @login_required
+@require_POST
 def product_delete(request, pk):
     redirect_response = _redirect_for_role_mismatch(
         request,

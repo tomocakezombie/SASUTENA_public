@@ -184,17 +184,25 @@ def conversation_list(request):
         )
 
         thread_key = thread_item.pk if thread_item else None
+        preview_text = (latest_message.message_content or "").strip()
+        has_message = bool(preview_text)
         if thread_key not in entry["threads"]:
             entry["threads"][thread_key] = {
                 "item": thread_item,
                 "thread_url": thread_url,
                 "preview_author": preview_author,
-                "preview": latest_message.message_content or "",
+                "preview": preview_text,
+                "has_message": has_message,
                 "latest_time": latest_message.send_time,
                 "unread_count": data["unread_count"],
             }
         else:
             entry["threads"][thread_key]["unread_count"] += data["unread_count"]
+            entry["threads"][thread_key]["has_message"] = has_message or entry["threads"][thread_key].get("has_message", False)
+            if has_message:
+                entry["threads"][thread_key]["preview"] = preview_text
+                entry["threads"][thread_key]["preview_author"] = preview_author
+                entry["threads"][thread_key]["latest_time"] = latest_message.send_time
                 
         entry["unread_count"] += data["unread_count"]
 
@@ -221,8 +229,9 @@ def conversation_list(request):
         threads_map[key] = {
             "item": product_obj,
             "thread_url": thread_url,
-            "preview_author": "未開始",
-            "preview": "メッセージはまだありません。",
+            "preview_author": "",
+            "preview": "",
+            "has_message": False,
             "latest_time": None,
             "unread_count": 0,
         }
@@ -261,16 +270,12 @@ def conversation_list(request):
             )
 
     initial_conversation_url = requested_thread_url or ""
-    if not initial_conversation_url and user_entries:
-        first_threads = user_entries[0]["threads"]
-        if first_threads:
-            initial_conversation_url = first_threads[0]["thread_url"]
 
     context = {
         "all_users": all_users,
         "user_entries": user_entries,
         "initial_conversation_url": initial_conversation_url,
-        "initial_username": requested_username or (user_entries[0]["counterpart"].username if user_entries else ""),
+        "initial_username": requested_username or "",
     }
     return render(request, "comunicate/conversation_list.html", context)
 
@@ -390,6 +395,7 @@ def message_edit(request, pk):
 
 
 @login_required
+@require_POST
 def message_delete(request, pk):
     message = get_object_or_404(Message, pk=pk, delete_flag=False)
     if message.send_user != request.user:

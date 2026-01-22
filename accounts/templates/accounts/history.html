@@ -67,7 +67,7 @@
             <div class="row text-center g-3">
                 <div class="col-6 col-md-6 summary-card custom-btn" data-status="completed" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.completed|default:"0" }}</div>
-                    <div class="small">取引成立</div>
+                    <div class="small">取引完了</div>
                 </div>
                 <div class="col-6 col-md-6 summary-card custom-btn" data-status="pending" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.applied|default:"0" }}</div>
@@ -91,7 +91,7 @@
                 </div>
                 <div class="col-6 col-md-3 summary-card custom-btn" data-status="completed" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.completed|default:"0" }}</div>
-                    <div class="small">取引成立</div>
+                    <div class="small">取引完了</div>
                 </div>
                 <div class="col-6 col-md-3 summary-card custom-btn" data-status="rejected" style="cursor:pointer;">
                     <div class="fs-4 fw-bold">{{ summary.rejected|default:"0" }}</div>
@@ -118,10 +118,10 @@
 
         <hr class="my-4">
 
-        <!-- 消費者: 取引成立・申込中商品リスト -->
+        <!-- 消費者: 取引完了・申込中商品リスト -->
         {% if role == "consumer" %}
         <section class="mx-auto mb-4" style="max-width:720px;">
-            <h2 id="consumer-list-heading" class="h6 text-center mb-3">取引成立した商品</h2>
+            <h2 id="consumer-list-heading" class="h6 text-center mb-3">取引完了した商品</h2>
 
             <!-- 検索・ソート -->
             <div class="d-flex flex-wrap gap-2 mb-3 justify-content-between align-items-center">
@@ -137,7 +137,7 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="list-group list-group-flush scrollable-list" id="consumer-history-list">
-                    <!-- 取引成立 -->
+                    <!-- 取引完了 -->
                     {% if completed_list %}
                         {% for app in completed_list %}
                         <article class="list-group-item py-3 px-3"
@@ -165,9 +165,9 @@
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                         <h3 class="h6 mb-0 fw-bold">{{ app.product.item_name }}</h3>
 
-                                        {% if app.apply_status == 1 %}
-                                            <span class="badge bg-success text-white">取引成立</span>
-                                        {% elif app.apply_status == 0 %}
+                                        {% if app.status_str == "completed" %}
+                                            <span class="badge bg-success text-white">取引完了</span>
+                                        {% elif app.status_str == "pending" %}
                                             <span class="badge bg-warning text-dark">申込中</span>
                                         {% endif %}
                                     </div>
@@ -242,9 +242,9 @@
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                         <h3 class="h6 mb-0 fw-bold">{{ app.product.item_name }}</h3>
 
-                                        {% if app.apply_status == 1 %}
-                                            <span class="badge bg-success text-white">取引成立</span>
-                                        {% elif app.apply_status == 0 %}
+                                        {% if app.status_str == "completed" %}
+                                            <span class="badge bg-success text-white">取引完了</span>
+                                        {% elif app.status_str == "pending" %}
                                             <span class="badge bg-warning text-dark">申込中</span>
                                         {% endif %}
                                     </div>
@@ -325,7 +325,7 @@
                 });
 
                 heading.textContent =
-                    currentStatus === 'completed' ? '取引成立した商品' : '申込中の商品';
+		            currentStatus === 'completed' ? '取引完了した商品' : '申込中の商品';
             }
 
             // 初期表示
@@ -518,7 +518,7 @@
                 const headingMap = {
                     registered: '登録済み商品',
                     approved: '承認済み商品',
-                    completed: '取引成立した商品',
+                    completed: '取引完了した商品',
                     rejected: '却下された商品',
                     received: '受注・申込み商品',
                 };

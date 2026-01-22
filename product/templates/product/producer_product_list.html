@@ -132,7 +132,10 @@
                                     {% endif %}
                                     <div class="d-flex flex-wrap align-items-center gap-2">
                                         <a class="btn btn-sm btn-outline-primary" href="{% url 'product:product_detail' product.pk %}">詳細を見る</a>
-                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'product:product_delete' product.pk %}" onclick="return confirm('本当に削除してよろしいですか？');">削除</a>
+                                          <form method="post" action="{% url 'product:product_delete' product.pk %}" class="d-inline" onsubmit="return confirm('本当に削除してよろしいですか？');">
+                                              {% csrf_token %}
+                                              <button type="submit" class="btn btn-sm btn-outline-danger">削除</button>
+                                          </form>
                                         {% if not product.completed and product.valid and product.publish and product.active_application_count > 0 %}
                                             <form method="post" action="{% url 'product:product_complete' product.pk %}" class="d-inline" onsubmit="return confirm('{{ product.item_name|escapejs }} の取引完了を通知します。よろしいですか？');">
                                                 {% csrf_token %}

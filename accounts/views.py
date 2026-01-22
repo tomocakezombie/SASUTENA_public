@@ -33,6 +33,13 @@ def _render_evaluation_forbidden(request, reason):
 	)
 
 
+def accounts_root(request):
+	"""Redirect /accounts/ to login or the user's dashboard."""
+	if not request.user.is_authenticated:
+		return redirect("login:login")
+	return redirect("accounts:my_page")
+
+
 def _build_star_states(average_score):
 	"""Return per-star fill state for displaying ratings."""
 	if average_score is None:
@@ -61,7 +68,7 @@ def build_status_rows(user):
 		).filter(Q(admin_comment__isnull=True) | Q(admin_comment=""))
 		rows.append({"label": "承認待ち出品", "value": pending_products.count(), "unit": "件"})
 		rows.append({"label": "承認済み出品", "value": products.filter(valid=True).count(), "unit": "件"})
-		rows.append({"label": "取引成立出品", "value": products.filter(completed=True).count(), "unit": "件"})
+		rows.append({"label": "取引完了", "value": products.filter(completed=True).count(), "unit": "件"})
 		orders_count = ProductApplication.objects.filter(product__user=user).count()
 		rows.append({"label": "受注（申込み）件数", "value": orders_count, "unit": "件"})
 	elif role == "consumer":
@@ -78,10 +85,10 @@ def build_status_rows(user):
 			"unit": "件",
 		})
 		rows.append({
-			"label": "取引完了申込み",
+			"label": "取引完了",
 			"value": applications.filter(
-				apply_status=ProductApplication.STATUS_APPROVED,
-				product__completed=True,
+				Q(product__completed=True)
+				| Q(apply_status=ProductApplication.STATUS_APPROVED)
 			).count(),
 			"unit": "件",
 		})
@@ -300,8 +307,8 @@ def settings(request):
 		},
 	)
 
-@require_POST
 @login_required
+@require_POST
 def update_profile_bio(request):
 	"""Persist profile bio updates triggered from the profile page."""
 	profile, _created = UserProfile.objects.get_or_create(
@@ -446,20 +453,32 @@ def history(request):
  
 	if role == "consumer":
 		applied_qs = ProductApplication.objects.filter(user=user).select_related("product")
-		completed_list = applied_qs.filter(apply_status=ProductApplication.STATUS_APPROVED).order_by("-apply_time")
 		applied_list = applied_qs.order_by("-apply_time")
-		pending_list = applied_qs.filter(apply_status=ProductApplication.STATUS_PENDING).order_by("-apply_time")
-  
-			# ループで追加
+		completed_qs = applied_qs.filter(
+			Q(product__completed=True) | Q(apply_status=ProductApplication.STATUS_APPROVED)
+		).order_by("-apply_time")
+		pending_qs = applied_qs.filter(
+			product__completed=False,
+			apply_status=ProductApplication.STATUS_PENDING,
+		).order_by("-apply_time")
+
+		completed_list = list(completed_qs)
+		pending_list = list(pending_qs)
+
+		def _derive_status(application):
+			if application.product and application.product.completed:
+				return "completed"
+			return STATUS_DISPLAY.get(application.apply_status, "pending")
+
 		for app in completed_list:
-			app.status_str = STATUS_DISPLAY[app.apply_status]
+			app.status_str = _derive_status(app)
 
 		for app in pending_list:
-			app.status_str = STATUS_DISPLAY[app.apply_status]
+			app.status_str = _derive_status(app)
 
 		summary = {
-			"completed": completed_list.count(),
-			"applied": applied_list.count(),
+			"completed": len(completed_list),
+			"applied": len(pending_list),
 		}
 
 	elif role == "producer":

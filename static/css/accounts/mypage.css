@@ -1,6 +1,8 @@
 .profile-page *{box-sizing:border-box;font-family:Yu Gothic, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif}
 .profile-page{background:#f4f7fb;color:#222}
 .profile-page .profile-container{max-width:900px;margin:0 auto;padding:20px}
+.profile-page .profile-section--narrow{max-width:720px;width:100%;margin-left:auto;margin-right:auto}
+.profile-page .profile-section--narrow .table{width:100%}
 .profile-page .card{background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(15,23,42,0.08);padding:16px;margin:12px 0}
 .profile-page h1{margin:8px 0 18px}
 .profile-page label{display:block;margin:8px 0}

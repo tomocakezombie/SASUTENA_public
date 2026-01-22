@@ -48,7 +48,11 @@
               </div>
               <div class="small text-muted text-start conversation-user__preview">
                 {% if first_thread %}
-                  最新: {{ first_thread.preview_author }}: {{ first_thread.preview|truncatechars:40 }}
+                  {% if first_thread.has_message %}
+                    最新: {{ first_thread.preview_author }}: {{ first_thread.preview|truncatechars:40 }}
+                  {% else %}
+                    最新: メッセージはまだありません
+                  {% endif %}
                 {% else %}
                   メッセージはまだありません
                 {% endif %}
@@ -136,10 +140,17 @@
                         class="list-group-item list-group-item-action d-flex justify-content-between align-items-start thread-button"
                         data-thread-url="{{ thread.thread_url }}"
                         data-item-name="{% if thread.item %}{{ thread.item.item_name }}{% else %}商品指定なし{% endif %}"
-                  data-item-id="{% if thread.item %}{{ thread.item.pk }}{% endif %}">
+                        data-item-id="{% if thread.item %}{{ thread.item.pk }}{% endif %}"
+                        data-search-text="{% if thread.item %}{{ thread.item.item_name }}{% else %}商品指定なし{% endif %}{% if thread.has_message %} {{ thread.preview_author }} {{ thread.preview }}{% endif %}">
                   <div class="me-3">
                     <div class="fw-semibold">スレッド: {% if thread.item %}{{ thread.item.item_name }}{% else %}商品指定なし{% endif %}</div>
-                    <div class="small text-muted text-start">最新: {{ thread.preview_author }}: {{ thread.preview|truncatechars:40 }}</div>
+                    <div class="small text-muted text-start">
+                      {% if thread.has_message %}
+                        最新: {{ thread.preview_author }}: {{ thread.preview|truncatechars:40 }}
+                      {% else %}
+                        最新: メッセージはまだありません
+                      {% endif %}
+                    </div>
                   </div>
                   <div class="text-end">
                     {% if thread.latest_time %}<div class="small text-muted">{{ thread.latest_time|date:"n/j H:i" }}</div>{% endif %}
@@ -228,7 +239,9 @@
     }
     let visibleCount = 0;
     buttons.forEach(button => {
-      const text = button.textContent.toLowerCase();
+      const source = button.dataset.searchText || '';
+      const textSource = source !== '' ? source : button.textContent;
+      const text = textSource.toLowerCase();
       const match = term === '' || text.includes(term);
       button.classList.toggle('d-none', !match);
       if (match) {
@@ -361,6 +374,53 @@
     } else {
       activeThreadButton = null;
     }
+    refreshProfileButton();
+  }
+
+  function buildDmReturnPath(username, itemId) {
+    const rawSearch = window.location.search || '';
+    const params = new URLSearchParams(rawSearch.startsWith('?') ? rawSearch.slice(1) : rawSearch);
+    if (username) {
+      params.set('user', username);
+    } else {
+      params.delete('user');
+    }
+    if (itemId) {
+      params.set('item', itemId);
+    } else {
+      params.delete('item');
+    }
+    const query = params.toString();
+    return window.location.pathname + (query ? '?' + query : '');
+  }
+
+  function refreshProfileButton() {
+    if (!profileButton || !selectedUserButton) {
+      return;
+    }
+    const username = selectedUserButton.dataset.username;
+    if (!username) {
+      profileButton.classList.add('d-none');
+      profileButton.removeAttribute('href');
+      return;
+    }
+    const displayName = selectedUserButton.dataset.displayName || username;
+    const template = profileButton.dataset.profileUrlTemplate || '';
+    if (!template) {
+      profileButton.classList.add('d-none');
+      return;
+    }
+    const itemId = activeThreadButton && activeThreadButton.dataset.itemId
+      ? activeThreadButton.dataset.itemId
+      : '';
+    const nextPath = buildDmReturnPath(username, itemId);
+    let href = template.replace('__USERNAME__', username);
+    if (nextPath) {
+      href += (href.includes('?') ? '&' : '?') + 'next=' + encodeURIComponent(nextPath);
+    }
+    profileButton.href = href;
+    profileButton.textContent = `${displayName} のプロフィール`;
+    profileButton.classList.remove('d-none');
   }
 
   function getThreadGroup(username) {
@@ -508,11 +568,22 @@
     const messageBody = threadElement.querySelector('.message-body');
     const authorNode = threadElement.querySelector('.message-author');
     const messageText = messageBody ? messageBody.textContent.trim() : '';
-    const previewContent = messageText ? messageText.slice(0, 40) : 'メッセージはまだありません';
-    const authorLabel = authorNode ? authorNode.textContent.trim() : '';
-    const previewLine = authorLabel ? authorLabel + ': ' + previewContent : previewContent;
+    const hasMessage = messageText !== '';
+    const previewContent = hasMessage ? messageText.slice(0, 40) : '';
+    const authorLabel = hasMessage && authorNode ? authorNode.textContent.trim() : '';
+    const displayPreview = hasMessage
+      ? (authorLabel ? authorLabel + ': ' + previewContent : previewContent)
+      : 'メッセージはまだありません';
     const headingLabel = 'スレッド: ' + itemName;
-    const previewLabel = '最新: ' + previewLine;
+    const previewLabel = '最新: ' + displayPreview;
+    const searchParts = [itemName];
+    if (hasMessage) {
+      if (authorLabel) {
+        searchParts.push(authorLabel);
+      }
+      searchParts.push(messageText);
+    }
+    const searchText = searchParts.join(' ');
     const timestampLabel = new Date().toLocaleString('ja-JP', {
       month: 'numeric',
       day: 'numeric',
@@ -535,6 +606,7 @@
           <div class="small text-muted">${timestampLabel}</div>
         </div>`;
       button.dataset.itemId = threadElement.dataset.itemId || '';
+        button.dataset.searchText = searchText;
       button.addEventListener('click', () => {
         loadConversation(threadUrl, button);
       });
@@ -563,6 +635,7 @@
       }
       button.dataset.itemName = itemName;
       button.dataset.itemId = threadElement.dataset.itemId || '';
+      button.dataset.searchText = searchText;
       button.dataset.bound = 'true';
     }
     const controls = group.querySelector('.thread-controls') || group;
@@ -632,9 +705,12 @@
       const messageBody = threadElement.querySelector('.message-body');
       const authorNode = threadElement.querySelector('.message-author');
       const messageText = messageBody ? messageBody.textContent.trim() : '';
-      const previewContent = messageText ? messageText.slice(0, 40) : 'メッセージはまだありません';
-      const authorLabel = authorNode ? authorNode.textContent.trim() : '';
-      const previewLine = authorLabel ? authorLabel + ': ' + previewContent : previewContent;
+      const hasMessage = messageText !== '';
+      const previewContent = hasMessage ? messageText.slice(0, 40) : '';
+      const authorLabel = hasMessage && authorNode ? authorNode.textContent.trim() : '';
+      const previewLine = hasMessage
+        ? (authorLabel ? authorLabel + ': ' + previewContent : previewContent)
+        : 'メッセージはまだありません';
       previewLabel.textContent = '最新: ' + previewLine;
     }
     if(shouldMove && button && userList){
@@ -738,12 +814,7 @@
     clearConversation(username);
 
 
-    if (profileButton) {
-      const template = profileButton.dataset.profileUrlTemplate;
-      profileButton.href = template.replace('__USERNAME__', username);
-      profileButton.textContent = `${displayName} のプロフィール`;
-      profileButton.classList.remove('d-none');
-    }
+    refreshProfileButton();
 
 
     if (threadUrl) {
@@ -868,12 +939,8 @@
     if (initialButton) {
       selectUser(initialButton, {autoThreadUrl: initialUrl});
     }
-  } else if (initialUrl && userList) {
-    const firstButton = userList.querySelector('.conversation-user');
-    if (firstButton) {
-      selectUser(firstButton, {autoThreadUrl: initialUrl});
-    }
   }
+  // 初期状態では自動選択を行わず、ユーザーに選択を促すメッセージを表示
 })();
 </script>
 {% endblock %}
