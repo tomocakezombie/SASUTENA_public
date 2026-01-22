@@ -38,7 +38,9 @@
             <span class="small text-muted">全{{ rating_count }}件</span>
           </div>
           {% else %}
+          {% if user_obj.role != "admin" %}
           <p class="small text-muted mb-2">まだ評価はありません。</p>
+          {% endif %}
           {% endif %}
           <div class="d-flex justify-content-center gap-2">
             <button type="button" id="profileEditBtn" class="btn btn-sm btn-outline-primary d-flex align-items-center">

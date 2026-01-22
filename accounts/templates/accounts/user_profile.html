@@ -66,7 +66,9 @@
                         <span class="small text-muted">全{{ rating_count }}件</span>
                     </div>
                     {% else %}
+                    {% if target_user.role == "producer" %}
                     <p class="small text-muted mb-2">まだ評価はありません。</p>
+                    {% endif %}
                     {% endif %}
                     {% if can_evaluate %}
                     <div class="d-flex justify-content-center gap-2">
